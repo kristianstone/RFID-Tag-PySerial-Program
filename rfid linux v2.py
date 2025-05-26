@@ -83,10 +83,11 @@ while True:
 
     # for reader 2 - need to basically duplicate reader 1 
     '''
-    # reader 2 processing
+    # reader 2 processing 
 
     2-BBT 
     '''
+
     
     # VID detector reads
     if queue3.empty():
