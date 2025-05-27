@@ -130,27 +130,29 @@ while True:
 
     # logic for storing data to analyse later
 
+# need to parse VID no matter what
+
     # true or false if results match for lane 1
     matchresult1 = currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty"
 
-    # need to modify so that it ignores both blanks
-    # want to show original RFID string too 
     # want to store entire string with repr
+    # only write when there is a read from RFID or VID
+    if currentVID1 != "empty" or currentRFID1 != "empty":
+        with open(resultsFile, 'a', newline='') as csvfile:
+            fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    with open(resultsFile, 'a', newline='') as csvfile:
-        fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'match']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            # write header if file is empty
+            if csvfile.tell() == 0:
+                writer.writeheader()
 
-        # write header if file is empty
-        if csvfile.tell() == 0:
-            writer.writeheader()
-
-        # write the current results
-        writer.writerow({
-            'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
-            'lane': '1',
-            'vid': currentVID1,
-            'rfid': currentRFID1,
-            'match': matchresult1
-        })
+            # write the current results
+            writer.writerow({
+                'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'lane': '1',
+                'vid': repr(currentVID1),
+                'rfid': repr(currentRFID1),
+                'rfidNum': reader1.get_tag(),
+                'match': matchresult1
+            })
 
