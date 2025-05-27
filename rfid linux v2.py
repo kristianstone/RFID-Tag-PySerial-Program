@@ -6,13 +6,10 @@ import csv
 import time
 from rfidClasses import *
 
-# create text file for logging data
-#logFileName = "data log " + str(dt.datetime.now().strftime("%d-%b %H%M%S")) + ".txt" # should be the same for linux
-#f = open(logFileName, 'a') # creates the text file
+# CSV file for logging results
+resultsFile = 'results.csv'
 
-# plan to create csv file for logging data instead
-
-# declare csv file
+# CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
 
 # testing only
@@ -30,8 +27,7 @@ vidLane2 = Reader(False, "empty") # VID detector lane 2
 # queue creation
 queue1 = queue.Queue() # queue for reader 1
 #queue2 = queue.Queue() # queue for reader 2
-queue3 = queue.Queue() # queue for VID Lane 1
-#queue4 = queue.Queue() # queue for VID Lane 2
+queue3 = queue.Queue() # queue for VID detector
 
 '''
 Serial Port Allocations
@@ -122,18 +118,39 @@ while True:
     # need comparison for each lane
 
     # lane 1 comparison - should use get tag for this too
-    if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty":
+    if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
         print("yes") 
         print("Output to PLC: " + repr(currentVID1)) # for trial, output only VID detector string
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
         time.sleep(1)
-
+    
     # lane 2 comparison
 
     # logic for storing data to analyse later
 
-    #f.close() # close after writing
-    #f = open(logFileName, 'a') # reopen for next iteration
+    # true or false if results match for lane 1
+    matchresult1 = currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty"
+
+    # need to modify so that it ignores both blanks
+    # want to show original RFID string too 
+    # want to store entire string with repr
+
+    with open(resultsFile, 'a', newline='') as csvfile:
+        fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'match']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        # write header if file is empty
+        if csvfile.tell() == 0:
+            writer.writeheader()
+
+        # write the current results
+        writer.writerow({
+            'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
+            'lane': '1',
+            'vid': currentVID1,
+            'rfid': currentRFID1,
+            'match': matchresult1
+        })
 

@@ -29,7 +29,7 @@ class Reader:
 
     Concerns:
     - misreads from RFID readers i.e. does not consider chars and will break
-    - tags must be either a number or "empty"
+    - rfid tags must be either a number or "empty"
     '''
     def get_fleetNumber(self, csvFile):
         self.fleetNumber = "Tag Not Registered" # default not registered
