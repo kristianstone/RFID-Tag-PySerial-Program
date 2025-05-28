@@ -4,10 +4,8 @@ import threading
 import queue
 import csv
 import time
+import os
 from rfidClasses import *
-
-# CSV file for logging results
-resultsFile = 'results.csv'
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
@@ -58,13 +56,29 @@ def serial_read(s, readerName):
         else: # add to VID queue
             queue3.put(sline.decode('utf-8'))
 
+# checks what the current results filename is
+def get_results_filename():
+    return f"results_{dt.datetime.now().strftime('%Y%m%d')}.csv"
+
+resultsFile = get_results_filename()  # initialize results file name
+current_log_date = dt.datetime.now().date()  # initialize current log date
+
 # this function logs the results to a CSV file
 # considering another column which has flags that describe the mismatch issue
 def log_result(now, lane, vid, rfid, rfidNum, match):
+    global resultsFile, current_log_date
+    # check if the date has changed
+    if now.date() != current_log_date:
+        resultsFile = get_results_filename()  # update results file name
+        current_log_date = now.date()  # update current log date
+
+    # create headers for csv file
+    write_header = not os.path.exists(resultsFile) or os.stat(resultsFile).st_size == 0
+
     with open(resultsFile, 'a', newline='') as csvfile:
         fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        if csvfile.tell() == 0:
+        if write_header: # write header only if the file is new or has changed date
             writer.writeheader()
         writer.writerow({
             'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
@@ -129,7 +143,7 @@ while True:
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
-        time.sleep(1)
+        time.sleep(0.5)
     
     # lane 2 comparison
     if currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty": # ensure not empty so that nothing is printed either
@@ -138,7 +152,7 @@ while True:
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
-        time.sleep(1)
+        time.sleep(0.5)
     
     # logic for storing data to analyse later
 
