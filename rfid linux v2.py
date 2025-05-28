@@ -58,22 +58,35 @@ def serial_read(s, readerName):
         else: # add to VID queue
             queue3.put(sline.decode('utf-8'))
 
+# this function logs the results to a CSV file
+# considering another column which has flags that describe the mismatch issue
+def log_result(now, lane, vid, rfid, rfidNum, match):
+    with open(resultsFile, 'a', newline='') as csvfile:
+        fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if csvfile.tell() == 0:
+            writer.writeheader()
+        writer.writerow({
+            'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
+            'lane': lane,
+            'vid': repr(vid),
+            'rfid': repr(rfid),
+            'rfidNum': rfidNum,
+            'match': match
+        })
+
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
-print("Ready") # This indicates that the software is ready
-
-# need to create out text file too
-
 while True:
     # time of event
     now = dt.datetime.now()
-
     # serial reading stuff
-
     # Reader 1 Check Tag
+
+    # lane 1 RFID reader queue
     if queue1.empty():
         reader1.change_tag("empty")
         currentRFID1 = "empty" # this variable shouldnt be used, should use class get_tag
@@ -83,14 +96,7 @@ while True:
         currentRFID1 = "1-BBT" + reader1.get_fleetNumber(csvFleetList) + ",00000000" + '\n' # not sure if new line required for final build
         print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
 
-    # for reader 2 - need to basically duplicate reader 1 
-    '''
-    # reader 2 processing 
-
-    2-BBT
-    
-    Probably should be a function to handle this
-    '''
+    # lane 2 RFID reader queue
     if queue2.empty():
         reader2.change_tag("empty")
         currentRFID2 = "empty"
@@ -98,17 +104,15 @@ while True:
         reader2.change_tag(queue2.get(True))
         currentRFID2 = "2-BBT" + reader2.get_fleetNumber(csvFleetList) + ",00000000" + '\n'
         print("RFID Lane 2 Read: " + repr(currentRFID2)) # repr to show escape characters like \n
-
     
-    
-    # VID detector reads for each lane
-    vid_input = None
+    # VID detector queue
+    vid_input = None # ensure no freezing
     try:
-        vid_input = queue3.get_nowait()
-    except queue.Empty:
-        vid_input = None
+        vid_input = queue3.get_nowait() # non-blocking get from queue
+    except queue.Empty: # if queue is empty
+        vid_input = None 
 
-    if vid_input is None:
+    if vid_input is None: # if no input from VID detector
         currentVID1 = "empty"
         currentVID2 = "empty"
     elif vid_input[0] == "1":
@@ -118,10 +122,7 @@ while True:
         currentVID2 = vid_input
         print("VID Lane 2 Read: " + repr(currentVID2))
 
-
-    # need to determine a method if one lane is empty and the other is not
-
-    # lane 1 comparison - should use get tag for this too
+    # lane 1 comparison 
     if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
         print("yes") 
         print("Output to PLC: " + repr(currentVID1)) # for trial, output only VID detector string
@@ -146,48 +147,12 @@ while True:
 
     # true or false if results match for lane 1
     matchresult1 = currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty"
-
-    # want to store entire string with repr
-    # only write when there is a read from RFID or VID
-    # might create a function to handle this and take the lane as an argument
-    # another column which has flags that describe the mismatch issue
-    if currentVID1 != "empty" or currentRFID1 != "empty":
-        with open(resultsFile, 'a', newline='') as csvfile:
-            fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            # write header if file is empty
-            if csvfile.tell() == 0:
-                writer.writeheader()
-
-            # write the current results
-            writer.writerow({
-                'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
-                'lane': '1',
-                'vid': repr(currentVID1),
-                'rfid': repr(currentRFID1),
-                'rfidNum': reader1.get_tag(),
-                'match': matchresult1
-            })
-
-    # true or false if results match for lane 2
     matchresult2 = currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty"
+
+    # lane 1 logging
+    if currentVID1 != "empty" or currentRFID1 != "empty":
+        log_result(now, '1', currentVID1, currentRFID1, reader1.get_tag(), matchresult1)
+    # lane 2 logging
     if currentVID2 != "empty" or currentRFID2 != "empty":
-        with open(resultsFile, 'a', newline='') as csvfile:
-            fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            # write header if file is empty
-            if csvfile.tell() == 0:
-                writer.writeheader()
-
-            # write the current results
-            writer.writerow({
-                'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
-                'lane': '2',
-                'vid': repr(currentVID2),
-                'rfid': repr(currentRFID2),
-                'rfidNum': reader2.get_tag(),
-                'match': matchresult2
-            })
+        log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
 
