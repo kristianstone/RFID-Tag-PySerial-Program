@@ -120,7 +120,6 @@ while True:
 
 
     # need to determine a method if one lane is empty and the other is not
-    
 
     # lane 1 comparison - should use get tag for this too
     if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
@@ -132,9 +131,9 @@ while True:
         time.sleep(1)
     
     # lane 2 comparison
-    if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
+    if currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty": # ensure not empty so that nothing is printed either
         print("yes") 
-        print("Output to PLC: " + repr(currentVID1)) # for trial, output only VID detector string
+        print("Output to PLC: " + repr(currentVID2)) # for trial, output only VID detector string
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
@@ -151,6 +150,7 @@ while True:
     # want to store entire string with repr
     # only write when there is a read from RFID or VID
     # might create a function to handle this and take the lane as an argument
+    # another column which has flags that describe the mismatch issue
     if currentVID1 != "empty" or currentRFID1 != "empty":
         with open(resultsFile, 'a', newline='') as csvfile:
             fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
