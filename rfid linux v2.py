@@ -7,6 +7,7 @@ import time
 import os
 from rfidClasses import *
 
+
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
 
@@ -42,7 +43,7 @@ ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N
 ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
 
 # output serial port - port 4 - /dev/ttyUSB3 on linux
-#ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
+ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
 
 
 # create serial read lines
@@ -138,8 +139,8 @@ while True:
 
     # lane 1 comparison 
     if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
-        print("yes") 
         print("Output to PLC: " + repr(currentVID1)) # for trial, output only VID detector string
+        ser4.write(currentVID1.encode('utf-8')) # send to serial port 4
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
@@ -149,15 +150,13 @@ while True:
     if currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty": # ensure not empty so that nothing is printed either
         print("yes") 
         print("Output to PLC: " + repr(currentVID2)) # for trial, output only VID detector string
+        ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
         time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
         time.sleep(0.5)
     
     # logic for storing data to analyse later
-
-# need to parse VID no matter what
-#ser3.write(muxString.encode('utf-8')) # testing string to transmit from port 4 over rs232
 
     # true or false if results match for lane 1
     matchresult1 = currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty"
@@ -169,4 +168,3 @@ while True:
     # lane 2 logging
     if currentVID2 != "empty" or currentRFID2 != "empty":
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
-
