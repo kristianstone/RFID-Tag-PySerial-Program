@@ -90,6 +90,22 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
             'match': match
         })
 
+# extract fleet number from VID String
+def vid_to_fleet_number(vid_string):
+    # assuming the VID string is formatted as "1-BBT<fleet_number>,00000000"
+    return vid_string.split(',')[0][5:]
+
+# function to check if VID string is in scope
+def is_vid_in_scope(fleet_number):
+    with open(csvFleetList, mode='r') as file:
+        for row in csv.reader(file):
+            if fleet_number == row[0]:
+                print(f"Fleet number {fleet_number} found in scope.")
+                return True
+    # return False if not found
+    print(f"Fleet number {fleet_number} not found in scope.")
+    return False
+
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
@@ -159,10 +175,16 @@ while True:
     matchresult2 = currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty"
 
     # lane 1 logging
-    if currentVID1 != "empty" or currentRFID1 != "empty":
+    if currentRFID1 != "empty": # ensure there is an RFID tag read
         log_result(now, '1', currentVID1, currentRFID1, reader1.get_tag(), matchresult1)
+    # record regardless of RFID, but only if VID is in scope
+    elif currentVID1 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID1)):
+        log_result(now, '1', currentVID1, currentRFID1, reader1.get_tag(), matchresult1)
+
     # lane 2 logging
-    if currentVID2 != "empty" or currentRFID2 != "empty":
+    if currentRFID2 != "empty":
+        log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
+    elif currentVID2 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID2)):
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
 
     time.sleep(1)  # sleep for a second before next iteration
