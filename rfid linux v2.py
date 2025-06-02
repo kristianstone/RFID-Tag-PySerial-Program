@@ -141,20 +141,16 @@ while True:
     if currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
         print("Output to PLC: " + repr(currentVID1)) # for trial, output only VID detector string
         ser4.write(currentVID1.encode('utf-8')) # send to serial port 4
-        time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
-        time.sleep(0.5)
     
     # lane 2 comparison
     if currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty": # ensure not empty so that nothing is printed either
         print("yes") 
         print("Output to PLC: " + repr(currentVID2)) # for trial, output only VID detector string
         ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
-        time.sleep(1)  # sleep for 1 second to allow for output to PLC
     else:
         print("no")
-        time.sleep(0.5)
     
     # logic for storing data to analyse later
 
@@ -168,3 +164,5 @@ while True:
     # lane 2 logging
     if currentVID2 != "empty" or currentRFID2 != "empty":
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
+
+    time.sleep(1)  # sleep for a second before next iteration
