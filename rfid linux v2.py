@@ -17,6 +17,10 @@ currentVID2 = "test"
 currentRFID1 = "test"
 currentRFID2 = "test"
 
+# RFID Reader Counters
+counterRFID1 = 0 # counter for RFID reader 1
+counterRFID2 = 0 # counter for RFID reader 2
+
 # create reader - this should make it easier having two readers
 reader1 = Reader(False, "empty") # initalize first reader
 reader2 = Reader(False, "empty") # second reader
@@ -100,11 +104,15 @@ def is_vid_in_scope(fleet_number):
     with open(csvFleetList, mode='r') as file:
         for row in csv.reader(file):
             if fleet_number == row[0]:
-                print(f"Fleet number {fleet_number} found in scope.")
+                #print(f"Fleet number {fleet_number} found in scope.")
                 return True
     # return False if not found
-    print(f"Fleet number {fleet_number} not found in scope.")
+    #print(f"Fleet number {fleet_number} not found in scope.")
     return False
+
+# increment counter
+def increment_counter(counter):
+    return counter + 1 # increment the counter by 1
 
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
@@ -124,7 +132,7 @@ while True:
     else:
         reader1.change_tag(queue1.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        currentRFID1 = "1-BBT" + reader1.get_fleetNumber(csvFleetList) + ",00000000" + '\n' # not sure if new line required for final build
+        currentRFID1 = "1-BBT" + reader1.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' # not sure if new line required for final build
         print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
 
     # lane 2 RFID reader queue
@@ -133,7 +141,7 @@ while True:
         currentRFID2 = "empty"
     else:
         reader2.change_tag(queue2.get(True))
-        currentRFID2 = "2-BBT" + reader2.get_fleetNumber(csvFleetList) + ",00000000" + '\n'
+        currentRFID2 = "2-BBT" + reader2.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' #VID 800 outputs \r and \n
         print("RFID Lane 2 Read: " + repr(currentRFID2)) # repr to show escape characters like \n
     
     # VID detector queue

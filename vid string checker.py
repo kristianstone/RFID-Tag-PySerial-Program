@@ -43,4 +43,8 @@ while True:
         muxString = queue3.get(True) # sets the string to whatever is in the queue
         currentVID = muxString
 
-    print("Current VID: " + repr(currentVID)) # print the current VID for testing purposes
+
+    if currentVID != "empty":
+        # if the current VID is not empty, print it
+        print("Current VID: " + repr(currentVID))
+    #print("Current VID: " + repr(currentVID)) # print the current VID for testing purposes
