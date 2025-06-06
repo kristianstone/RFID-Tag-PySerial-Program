@@ -25,7 +25,12 @@ prevRFID2 = "init" # previous RFID for lane 2
 counterRFID1 = 0 # counter for RFID reader 1
 counterRFID2 = 0 # counter for RFID reader 2
 
-# RFID Read Counts
+emptyCounter1 = 0 # counter for empty reads on RFID reader 1
+emptyCounter2 = 0 # counter for empty reads on RFID reader 2
+
+noReadLimit = 3 # number of empty reads before resetting the counter
+
+# RFID Read Counts - Each lane may require different read counts
 readCount1 = 5 # required read count for RFID reader 1
 readCount2 = 5 # required read count for RFID reader 2
 
@@ -133,15 +138,20 @@ while True:
     if queue1.empty():
         reader1.change_tag("empty")
         currentRFID1 = "empty" # this variable shouldnt be used, should use class get_tag
-        counterRFID1 = 0 # reset the counter to 0 if queue is empty
+        emptyCounter1 += 1 # increment the empty counter for RFID reader 1
+        
+        if emptyCounter1 >= noReadLimit: # counterRFID resets if too many empty reads
+            counterRFID1 = 0 
+
     else:
+        emptyCounter1 = 0 # reset empty counter if queue is not empty
         reader1.change_tag(queue1.get(True))
         # conversion to the proper string, look up table handled inside of reader class
         currentRFID1 = "1-BBT" + reader1.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' # not sure if new line required for final build
-        if currentRFID1 == prevRFID1: 
-            counterRFID1 += 1 # increment the counter for RFID reader 1
-        else: # need to reset too if a reasonable amount of time has passed maybe
+        counterRFID1 += 1
+        if currentRFID1 != prevRFID1:
             counterRFID1 = 0 # reset the counter to 0 if different tag is read
+        
         prevRFID1 = currentRFID1  # update previous RFID for lane 1
         print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
 
@@ -177,13 +187,13 @@ while True:
         currentVID2 = vid_input
         print("VID Lane 2 Read: " + repr(currentVID2))
 
-    # lane 1 comparison 
-    if counterRFID1 > readCount1 and currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty": # ensure not empty so that nothing is printed either
+    # lane 1 comparison - ser4 should be writing the VID anyway
+    if counterRFID1 > readCount1: #and currentVID1 == currentRFID1: 
         print("Output to PLC: " + repr(currentVID1)) # output only VID detector string
         ser4.write(currentVID1.encode('utf-8')) # send to serial port 4
     
     # lane 2 comparison
-    if counterRFID2 > readCount2 and currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty": # ensure not empty so that nothing is printed either
+    if counterRFID2 > readCount2: #and currentVID2 == currentRFID2:
         print("Output to PLC: " + repr(currentVID2)) # output only VID detector string
         ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
     
