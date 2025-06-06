@@ -115,6 +115,11 @@ def is_vid_in_scope(fleet_number):
                 return True
     return False
 
+# function to check battery health of RFID tag
+def tag_battery_check(tagString):
+    if tagString.startswith('n'):
+        return "Low Battery Detected: " + tagString
+
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
@@ -123,8 +128,6 @@ vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID de
 while True:
     # time of event
     now = dt.datetime.now()
-    # serial reading stuff
-    # Reader 1 Check Tag
 
     # lane 1 RFID reader queue
     if queue1.empty():
@@ -184,8 +187,6 @@ while True:
         print("Output to PLC: " + repr(currentVID2)) # output only VID detector string
         ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
     
-    # logic for storing data to analyse later
-
     # true or false if results match for lane 1
     matchresult1 = currentVID1 == currentRFID1 and currentVID1 != "empty" and currentRFID1 != "empty"
     matchresult2 = currentVID2 == currentRFID2 and currentVID2 != "empty" and currentRFID2 != "empty"
