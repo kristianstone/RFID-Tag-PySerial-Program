@@ -159,14 +159,19 @@ while True:
     if queue2.empty():
         reader2.change_tag("empty")
         currentRFID2 = "empty"
-        counterRFID2 = 0 # reset the counter to 0 if queue is empty
+        emptyCounter2 += 1
+
+        if emptyCounter2 >= noReadLimit: # counterRFID resets if too many empty reads
+            counterRFID2 = 0
+        
     else:
+        emptyCounter2 = 0
         reader2.change_tag(queue2.get(True))
         currentRFID2 = "2-BBT" + reader2.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' #VID 800 outputs \r and \n
-        if currentRFID2 == prevRFID2:
-            counterRFID2 += 1
-        else: 
-            counterRFID2 = 0 # reset the counter to 0 if different tag is read
+        counterRFID2 += 1 # increment the counter for RFID reader 2
+        if currentRFID2 != prevRFID2:
+            counterRFID2 = 0
+        
         prevRFID2 = currentRFID2  # update previous RFID for lane 2
         print("RFID Lane 2 Read: " + repr(currentRFID2)) # repr to show escape characters like \n
     
