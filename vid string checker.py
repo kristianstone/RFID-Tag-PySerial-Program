@@ -13,7 +13,7 @@ queue3 = queue.Queue() # queue for VID detector
 Serial Port Allocations
 '''
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
-ser3 = serial.Serial('COM15', baudrate=9600)
+ser3 = serial.Serial('COM16', baudrate=9600)
 
 # output serial port - port 4 - /dev/ttyUSB3 on linux
 #ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
