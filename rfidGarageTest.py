@@ -27,11 +27,11 @@ counterRFID2 = 0 # counter for RFID reader 2
 emptyCounter1 = 0 # counter for empty reads on RFID reader 1
 emptyCounter2 = 0 # counter for empty reads on RFID reader 2
 
-noReadLimit = 3 # number of empty reads before resetting the counter
+noReadLimit = 1 # number of empty reads before resetting the counter
 
 # RFID Read Counts - Each lane may require different read counts
-readCount1 = 5 # required read count for RFID reader 1
-readCount2 = 5 # required read count for RFID reader 2
+readCount1 = 2 # required read count for RFID reader 1
+readCount2 = 2 # required read count for RFID reader 2
 
 # create reader - this should make it easier having two readers
 reader1 = Reader(False, "empty") # initalize first reader

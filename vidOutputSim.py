@@ -5,10 +5,12 @@ from rfidClasses import *
 
 '''
 Serial Port Allocations
+2809 is the current tag i have "in scope"
+
 '''
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux or COM15 on Windows
-ser3 = serial.Serial('COM16', baudrate=9600)
-line = "1-BBT2302,00000000" + '\r\n' # CR and LF as per VID 800
+ser3 = serial.Serial('COM18', baudrate=9600)
+line = "1-BBT2809,12344321" + '\r\n' # CR and LF as per VID 800
 #line2 = "2-BBT2809,00000000" + '\r\n'
 
 while True:
