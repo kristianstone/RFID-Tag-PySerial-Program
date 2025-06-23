@@ -5,10 +5,16 @@ import queue
 import csv
 import time
 import os
+import revpimodio2
+
 from rfidClasses import *
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
+
+# UPS Variables
+shutdown_countdown = 10  # seconds before shutdown
+rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO 
 
 # current RFID and VID values
 currentVID1 = "init"
@@ -125,12 +131,31 @@ def tag_battery_check(tagString):
         return "Low Battery Detected: " + tagString
 
 # UPS Shutdown Function
+def shutdown_countdown_func(): 
+    while 1: # loop this thread to constantly monitor UPS status
+        if rpi.io.RevPiStatus.value & (1<<6):
+            for i in range(shutdown_countdown, 0, -1):
+                time.sleep(1)
+                if (rpi.io.RevPiStatus.value & (1<<6)):
+                    print("Shutdown aborted!")
+                    time.sleep(1)
+                    break
+                print(f"Shutting down in {i} seconds...")
+            else:
+                print("Shutting down now...")
+                os.system("sudo shutdown now")
+        else:
+            time.sleep(0.5)  # sleep for a short time to avoid busy waiting
 
+# UPS Shutdown Thread
+shutdown_thread = None
 
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
+
+shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() # UPS shutdown thread
 
 while True:
     # time of event
