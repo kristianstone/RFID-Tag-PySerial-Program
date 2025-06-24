@@ -6,8 +6,10 @@ import csv
 import time
 import os
 import revpimodio2
+import sys
 
 from rfidClasses import *
+#from rfidUtil import *
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
@@ -56,28 +58,47 @@ queue3 = queue.Queue() # queue for VID detector
 Serial Port Allocations
 '''
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
-ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
+try:
+    ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
+except serial.SerialException as e:
+    print(f"Error opening serial port for reader 1: {e}")
+    sys.exit()
 
 # reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
-ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
+try:
+    ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
+except serial.SerialException as e:
+    print(f"Error opening serial port for reader 2: {e}")
+    sys.exit()
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
-ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
+try:
+    ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
+except serial.SerialException as e:
+    print(f"Error opening serial port for VID detector: {e}")
+    sys.exit()
 
 # output serial port - port 4 - /dev/ttyUSB3 on linux
-ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
-
+try:
+    ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
+except serial.SerialException as e:
+    print(f"Error opening serial port for output: {e}")
+    sys.exit()
 
 # create serial read lines
 def serial_read(s, readerName):
     while 1:
-        sline = s.readline()
-        if readerName == "R1:": # add to reader 1 queue
-            queue1.put(sline.decode('utf-8'))
-        elif readerName == "R2:": # add to reader 2 queue
-            queue2.put(sline.decode('utf-8')) # may consider bringing readerName back
-        else: # add to VID queue
-            queue3.put(sline.decode('utf-8'))
+        try:
+            sline = s.readline()
+            if readerName == "R1:": # add to reader 1 queue
+                queue1.put(sline.decode('utf-8'))
+            elif readerName == "R2:": # add to reader 2 queue
+                queue2.put(sline.decode('utf-8')) # may consider bringing readerName back
+            else: # add to VID queue
+                queue3.put(sline.decode('utf-8'))
+        except Exception as e:
+            print(f"Error reading from {readerName}: {e}")
+            sys.exit() # this may not work
 
 # checks what the current results filename is
 def get_results_filename():
@@ -98,24 +119,33 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
     # create headers for csv file
     write_header = not os.path.exists(resultsFile) or os.stat(resultsFile).st_size == 0
 
-    with open(resultsFile, 'a', newline='') as csvfile:
-        fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        if write_header: # write header only if the file is new or has changed date
-            writer.writeheader()
-        writer.writerow({
-            'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
-            'lane': lane,
-            'vid': repr(vid),
-            'rfid': repr(rfid),
-            'rfidNum': rfidNum,
-            'match': match
-        })
+    try:
+        with open(resultsFile, 'a', newline='') as csvfile:
+            fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if write_header: # write header only if the file is new or has changed date
+                writer.writeheader()
+            writer.writerow({
+                'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'lane': lane,
+                'vid': repr(vid),
+                'rfid': repr(rfid),
+                'rfidNum': rfidNum,
+                'match': match
+            })
+    except Exception as e:
+        print(f"Error writing to results file {resultsFile}: {e}")
+        sys.exit()
 
 # extract fleet number from VID String
 def vid_to_fleet_number(vid_string):
     # assuming the VID string is formatted as "1-BBT<fleet_number>,00000000"
-    return vid_string.split(',')[0][5:]
+    try:
+        return vid_string.split(',')[0][5:]
+    except Exception as e: #Might make index error
+        # might include more logic here to handle different formats
+        print(f"Error extracting fleet number: '{vid_string}': {e}")
+        return None
 
 # function to check if VID string is in scope
 def is_vid_in_scope(fleet_number):
@@ -148,15 +178,16 @@ def shutdown_countdown_func():
             time.sleep(0.5)  # sleep for a short time to avoid busy waiting
 
 # UPS Shutdown Thread
-shutdown_thread = None
+shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() 
 
 # creating each thread to receive data from readers
 r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
-shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() # UPS shutdown thread
-
+'''
+Main Loop - this will run continuously to read from queues and process data
+'''
 while True:
     # time of event
     now = dt.datetime.now()
@@ -242,9 +273,8 @@ while True:
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
     elif currentVID2 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID2)):
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
-
-        
         #ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
-      
+    
     # this doesnt allow both lanes to handle at the same time effectively 
+
     time.sleep(1)  # sleep for a second before next iteration
