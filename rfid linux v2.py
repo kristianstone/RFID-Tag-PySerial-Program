@@ -18,6 +18,9 @@ csvFleetList = 'fleet_list.csv'
 shutdown_countdown = 10  # seconds before shutdown
 rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO 
 
+# Relay Output Value
+rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
+
 # current RFID and VID values
 currentVID1 = "init"
 currentVID2 = "init"
@@ -62,6 +65,7 @@ try:
     ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
+    rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
 
 # reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
@@ -69,6 +73,7 @@ try:
     ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 2: {e}")
+    rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
@@ -76,6 +81,7 @@ try:
     ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
+    rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
 
 # output serial port - port 4 - /dev/ttyUSB3 on linux
@@ -83,6 +89,7 @@ try:
     ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for output: {e}")
+    rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
 
 # create serial read lines
@@ -98,6 +105,7 @@ def serial_read(s, readerName):
                 queue3.put(sline.decode('utf-8'))
         except Exception as e:
             print(f"Error reading from {readerName}: {e}")
+            rpi.io.RevPiOutput.value = 1 # turn on LED
             sys.exit() # this may not work
 
 # checks what the current results filename is
@@ -135,6 +143,7 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
             })
     except Exception as e:
         print(f"Error writing to results file {resultsFile}: {e}")
+        rpi.io.RevPiOutput.value = 1 # turn on LED
         sys.exit()
 
 # extract fleet number from VID String
