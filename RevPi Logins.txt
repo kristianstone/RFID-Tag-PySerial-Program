@@ -1,0 +1,8 @@
+Toowong RevPi: 
+
+user: pi
+pass: a95vw1
+
+Toowong WiFi:
+name: TBGrfid
+pass: ToowongFMS
