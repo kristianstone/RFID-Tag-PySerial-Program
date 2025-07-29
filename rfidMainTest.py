@@ -1,3 +1,13 @@
+"""
+Attempting to resolve VID thread and queue issues
+
+Trying to also resolve RFID tag logging issues
+
+This includes bare minimum RS232 connections:
+    Reader 1
+    VID Input
+"""
+
 import serial
 import datetime as dt
 import threading
@@ -61,34 +71,21 @@ queue3 = queue.Queue() # queue for VID detector
 Serial Port Allocations
 '''
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
+"""
 try:
     ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
+"""
 
-# reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
-try:
-    ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
-except serial.SerialException as e:
-    print(f"Error opening serial port for reader 2: {e}")
-    rpi.io.RevPiOutput.value = 1 # turn on LED
-    sys.exit()
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
-    ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
+    ser3 = serial.Serial('/dev/ttyUSB0', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
-    rpi.io.RevPiOutput.value = 1 # turn on LED
-    sys.exit()
-
-# output serial port - port 4 - /dev/ttyUSB3 on linux
-try:
-    ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
-except serial.SerialException as e:
-    print(f"Error opening serial port for output: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
     sys.exit()
 
@@ -96,25 +93,6 @@ except serial.SerialException as e:
 resultsFile = get_results_filename()  # initialize results file name
 current_log_date = dt.datetime.now().date()  # initialize current log date
 
-# UPS Shutdown Function
-def shutdown_countdown_func(): 
-    while 1: # loop this thread to constantly monitor UPS status
-        if rpi.io.RevPiStatus.value & (1<<6):
-            for i in range(shutdown_countdown, 0, -1):
-                time.sleep(1)
-                if (rpi.io.RevPiStatus.value & (1<<6)):
-                    print("Shutdown aborted!")
-                    time.sleep(1)
-                    break
-                print(f"Shutting down in {i} seconds...")
-            else:
-                print("Shutting down now...")
-                os.system("sudo shutdown now")
-        else:
-            time.sleep(0.5)  # sleep for a short time to avoid busy waiting
-
-# UPS Shutdown Thread
-shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() 
 
 # create serial read lines
 def serial_read(s, readerName):
@@ -166,8 +144,8 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
-r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
+#r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
+
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
 '''
@@ -196,29 +174,9 @@ while True:
             counterRFID1 = 0 # reset the counter to 0 if different tag is read
         
         prevRFID1 = currentRFID1  # update previous RFID for lane 1
-        #print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
+        print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
 
-    # lane 2 RFID reader queue
-    if queue2.empty():
-        reader2.change_tag("empty")
-        currentRFID2 = "empty"
-        emptyCounter2 += 1
-
-        if emptyCounter2 >= noReadLimit: # counterRFID resets if too many empty reads
-            counterRFID2 = 0
-        
-    else:
-        emptyCounter2 = 0
-        reader2.change_tag(queue2.get(True))
-        currentRFID2 = "2-BBT" + reader2.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' #VID 800 outputs \r and \n
-        counterRFID2 += 1 # increment the counter for RFID reader 2
-        if currentRFID2 != prevRFID2:
-            counterRFID2 = 0
-        
-        prevRFID2 = currentRFID2  # update previous RFID for lane 2
-        #print("RFID Lane 2 Read: " + repr(currentRFID2)) # repr to show escape characters like \n
     
-
     # VID detector queue
     vidsList = []
     while True:
@@ -238,13 +196,27 @@ while True:
             currentVID2 = vidIn
 
     if currentVID1 != "empty":
-        #print("VID Lane 1 Read: " + repr(currentVID1))
-        ser4.write(currentVID1.encode('utf-8'))  # send to serial port 4
+        print("VID Lane 1 Read: " + repr(currentVID1))
+        # serial write
     
     if currentVID2 != "empty":
-        #print("VID Lane 2 Read: " + repr(currentVID2))
-        ser4.write(currentVID2.encode('utf-8'))  # send to serial port 4
+        print("VID Lane 2 Read: " + repr(currentVID2))
+        # serial write
 
+
+    """
+    if vid_input is None: # if no input from VID detector
+        currentVID1 = "empty" # might be issues here if one lane has a VID and the other does not
+        currentVID2 = "empty"
+    elif vid_input[0] == "1":
+        currentVID1 = vid_input
+        print("VID Lane 1 Read: " + repr(currentVID1))
+    elif vid_input[0] == "2":
+        currentVID2 = vid_input
+        print("VID Lane 2 Read: " + repr(currentVID2))
+    """
+
+    
     # true or false if results match for lane 1
     matchresult1 = vid_to_fleet_number(currentVID1) == vid_to_fleet_number(currentRFID1) and currentVID1 != "empty" and currentRFID1 != "empty"
     matchresult2 = vid_to_fleet_number(currentVID2) == vid_to_fleet_number(currentRFID2) and currentVID2 != "empty" and currentRFID2 != "empty"
@@ -259,13 +231,6 @@ while True:
     elif currentVID1 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID1), csvFleetList):
         log_result(now, '1', currentVID1, currentRFID1, reader1.get_tag(), matchresult1)
         #ser4.write(currentVID1.encode('utf-8')) # send to serial port 4
-    
-    # lane 2 comparison
-    if counterRFID2 > readCount2: #and currentVID2 == currentRFID2:
-        log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
-    elif currentVID2 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID2), csvFleetList):
-        log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
-        #ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
     
     # this doesnt allow both lanes to handle at the same time effectively 
 
