@@ -15,12 +15,12 @@ line2 = "2-BBT2809,00000000" + '\r\n'
 
 while True:
     for i in range(10):
-        ser3.write(line.encode('utf-8'))
+        ser3.write(line.encode('utf-8')) 
         ser3.write(line2.encode('utf-8'))
         time.sleep(1)
     time.sleep(5)  # wait for 5 seconds before sending again
     for i in range(3):
-        ser3.write(line2.encode('utf-8'))
+        ser3.write(line2.encode('utf-8')) # test to break
         time.sleep(1)
     for i in range(3):
         ser3.write(line.encode('utf-8'))

@@ -87,7 +87,7 @@ try:
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
-    sys.exit()
+    #sys.exit()
 
 
 resultsFile = get_results_filename()  # initialize results file name

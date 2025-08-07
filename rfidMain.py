@@ -116,8 +116,18 @@ def shutdown_countdown_func():
 # UPS Shutdown Thread
 shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() 
 
-# create serial read lines
+
 def serial_read(s, readerName):
+    """
+    Read strings received from an RFID reader or VID 800 and organizes them into the correct queue.
+    Strings are UTF-8 decoded.
+
+    Args:
+        readerName: String which indicates which reader the string is from: R1, R2 else VID 800.
+
+    Raises:
+        Exception: An error occured when communicating with the reader. The LED while turn on.
+    """
     while 1:
         try:
             sline = s.readline()
@@ -129,12 +139,26 @@ def serial_read(s, readerName):
                 queue3.put(sline.decode('utf-8'))
         except Exception as e:
             print(f"Error reading from {readerName}: {e}")
-            rpi.io.RevPiOutput.value = 1 # turn on LED
-            sys.exit() # this may not work
+            rpi.io.RevPiOutput.value = 1 # turn on LED 
 
-# this function logs the results to a CSV file
+
 # considering another column which has flags that describe the mismatch issue
 def log_result(now, lane, vid, rfid, rfidNum, match):
+    """
+    Stores the results of the program into a CSV file for data analysis. 
+    Data is placed into columns: timestamp, lane, vid, rfid, rfidNum, match
+
+    Args:
+        now: The current date and time
+        lane: Which lane the RFID/ VID reading occured
+        vid: String received by the VID
+        rfid: String converted from the RFID string
+        rfidNum: String received by the RFID reader
+        match: Bool if vid == rfid
+    
+    Raises:
+        Exception: An error occured writing to the CSV file.
+    """
     global resultsFile, current_log_date
     # check if the date has changed
     if now.date() != current_log_date:
@@ -161,7 +185,6 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
     except Exception as e:
         print(f"Error writing to results file {resultsFile}: {e}")
         rpi.io.RevPiOutput.value = 1 # turn on LED
-        sys.exit()
 
 
 
@@ -237,6 +260,8 @@ while True:
         elif vidIn.startswith("2"): # VID for lane 2
             currentVID2 = vidIn
 
+
+    # these are to be removed in the final build
     if currentVID1 != "empty":
         #print("VID Lane 1 Read: " + repr(currentVID1))
         ser4.write(currentVID1.encode('utf-8'))  # send to serial port 4
@@ -266,7 +291,5 @@ while True:
     elif currentVID2 != "empty" and is_vid_in_scope(vid_to_fleet_number(currentVID2), csvFleetList):
         log_result(now, '2', currentVID2, currentRFID2, reader2.get_tag(), matchresult2)
         #ser4.write(currentVID2.encode('utf-8')) # send to serial port 4
-    
-    # this doesnt allow both lanes to handle at the same time effectively 
 
     time.sleep(1)  # sleep for a second before next iteration
