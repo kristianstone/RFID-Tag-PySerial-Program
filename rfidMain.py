@@ -7,9 +7,11 @@ import time
 import os
 import revpimodio2
 import sys
+import tkinter as tk
 
 from rfidClasses import *
 from rfidUtil import *
+from rfidGui import RfidGui
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
@@ -138,7 +140,7 @@ def serial_read(s, readerName):
             else: # add to VID queue
                 queue3.put(sline.decode('utf-8'))
         except Exception as e:
-            print(f"Error reading from {readerName}: {e}")
+            print(f"[{dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error reading from {readerName}: {e}")
             rpi.io.RevPiOutput.value = 1 # turn on LED 
 
 
@@ -193,15 +195,21 @@ r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
+
 '''
 Main Loop - this will run continuously to read from queues and process data
 '''
 while True:
+    # gui stuff
+    #root = tk.Tk()
+    #appGui = RfidGui(root)  # create the GUI instance
+    #root.mainloop()  # start the GUI event loop
     # time of event
     now = dt.datetime.now()
 
     # lane 1 RFID reader queue
     if queue1.empty():
+        #appGui.update_lane(1, 'blue')  
         reader1.change_tag("empty")
         currentRFID1 = "empty" # this variable shouldnt be used, should use class get_tag
         emptyCounter1 += 1 # increment the empty counter for RFID reader 1
@@ -220,6 +228,9 @@ while True:
         
         prevRFID1 = currentRFID1  # update previous RFID for lane 1
         #print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
+
+        # testing gui stuff
+        #appGui.update_lane(1, 'green')  # update lane 1 status to green in GUI
 
     # lane 2 RFID reader queue
     if queue2.empty():
