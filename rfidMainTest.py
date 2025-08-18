@@ -15,21 +15,24 @@ import queue
 import csv
 import time
 import os
-import revpimodio2
+#import revpimodio2
 import sys
+from dash import Dash, html, dcc, callback, Output, Input
+import sqlite3
 
 from rfidClasses import *
-from rfidUtil import *
+from rfidUtilTesting import *
+
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
 
 # UPS Variables
 shutdown_countdown = 10  # seconds before shutdown
-rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO 
+#rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO 
 
 # Relay Output Value
-rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
+#rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
 
 # current RFID and VID values
 currentVID1 = "init"
@@ -83,10 +86,10 @@ except serial.SerialException as e:
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
-    ser3 = serial.Serial('/dev/ttyUSB0', baudrate=9600)
+    ser3 = serial.Serial('COM14', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
-    rpi.io.RevPiOutput.value = 1 # turn on LED
+    #rpi.io.RevPiOutput.value = 1 # turn on LED
     #sys.exit()
 
 
@@ -107,8 +110,7 @@ def serial_read(s, readerName):
                 queue3.put(sline.decode('utf-8'))
         except Exception as e:
             print(f"Error reading from {readerName}: {e}")
-            rpi.io.RevPiOutput.value = 1 # turn on LED
-            sys.exit() # this may not work
+            #rpi.io.RevPiOutput.value = 1 # turn on LED
 
 # this function logs the results to a CSV file
 # considering another column which has flags that describe the mismatch issue
@@ -138,15 +140,39 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
             })
     except Exception as e:
         print(f"Error writing to results file {resultsFile}: {e}")
-        rpi.io.RevPiOutput.value = 1 # turn on LED
+        #rpi.io.RevPiOutput.value = 1 # turn on LED
         sys.exit()
 
+# testing retreiving reader tag
+def get_current_vid():
+    return currentVID1
 
 
 # creating each thread to receive data from readers
 #r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
 
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
+
+# testing database stuff
+conn = sqlite3.connect('vid_data.db') # create or connect to the database
+cursor = conn.cursor() # create a cursor object to execute SQL commands
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS vid_data (
+            lane INTEGER PRIMARY KEY,
+            vid TEXT,
+            rfid TEXT
+    )
+''')  # creates table with limited columns
+
+conn.commit()  # commit the changes to the database
+
+# initialize a column for each lane
+for lane in [1, 2]:
+    cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
+conn.commit()  # commit the changes to the database
+
+
 
 '''
 Main Loop - this will run continuously to read from queues and process data
@@ -186,7 +212,7 @@ while True:
         except queue.Empty:
             break
 
-    currentVID1 = "empty"  # default value for VID lane 1
+    currentVID1 = "empty"  # default value for VID lane 1 this is pretty dumb looking at it now
     currentVID2 = "empty"  # default value for VID lane 2
 
     for vidIn in vidsList:
@@ -196,31 +222,26 @@ while True:
             currentVID2 = vidIn
 
     if currentVID1 != "empty":
-        print("VID Lane 1 Read: " + repr(currentVID1))
+        #print("VID Lane 1 Read: " + repr(currentVID1))
+        pass
         # serial write
     
     if currentVID2 != "empty":
         print("VID Lane 2 Read: " + repr(currentVID2))
         # serial write
 
+    # testing database update
+    update_lane_data(cursor, 1, currentVID1, currentRFID1)  # update lane 1 data in the database
+    conn.commit()  # commit the changes to the database
 
-    """
-    if vid_input is None: # if no input from VID detector
-        currentVID1 = "empty" # might be issues here if one lane has a VID and the other does not
-        currentVID2 = "empty"
-    elif vid_input[0] == "1":
-        currentVID1 = vid_input
-        print("VID Lane 1 Read: " + repr(currentVID1))
-    elif vid_input[0] == "2":
-        currentVID2 = vid_input
-        print("VID Lane 2 Read: " + repr(currentVID2))
-    """
-
-    
     # true or false if results match for lane 1
     matchresult1 = vid_to_fleet_number(currentVID1) == vid_to_fleet_number(currentRFID1) and currentVID1 != "empty" and currentRFID1 != "empty"
     matchresult2 = vid_to_fleet_number(currentVID2) == vid_to_fleet_number(currentRFID2) and currentVID2 != "empty" and currentRFID2 != "empty"
     
+    # testing database retrieve
+    vid1, rfid1 = read_lane_data(cursor, 1)  # read lane 1 data from the database
+    print(f"Lane 1: VID={vid1}, RFID={rfid1}")
+
     # RFID data only recorded if certain read conditions are met
 
     # lane 1 comparison - ser4 should be writing the VID anyway
@@ -232,6 +253,4 @@ while True:
         log_result(now, '1', currentVID1, currentRFID1, reader1.get_tag(), matchresult1)
         #ser4.write(currentVID1.encode('utf-8')) # send to serial port 4
     
-    # this doesnt allow both lanes to handle at the same time effectively 
-
     time.sleep(1)  # sleep for a second before next iteration

@@ -1,32 +1,34 @@
-import tkinter as tk
+from dash import Dash, html, dcc, callback, Output, Input
+import dash_daq as daq
+import rfidMainTest
 
-class RfidGui:
-    def __init__(self, master):
-        self.master = master
-        # Initialize the main window
-        self.master.title("RFID GUI")
-        self.master.geometry("1200x700")
 
-        # Creating Widgets
-        self.label = tk.Label(master, text="Welcome to the RFID GUI")
-        
-        self.lane1 = tk.Label(master, text="Lane 1", bg="red", width=30, height=30)
-        self.lane2 = tk.Label(master, text="Lane 2", bg="red", width=30, height=30)
+app = Dash()
 
-        # packing items into frame
-        self.label.grid(row=0, column=0, pady=20)
-        self.lane1.grid(row=1, column=0, padx=200, pady=10)
-        self.lane2.grid(row=1, column=1, padx=20, pady=10)
+print(rfidMainTest.currentVID1)
 
-    def update_lane(self, laneNumber, status):
-        """
-        Update the status of a lane.
-        :param lane_number: 1 or 2
-        :param status: 'red' or 'green'
-        """
-        if laneNumber == 1:
-            self.lane1.config(bg=status)
-        elif laneNumber == 2:
-            self.lane2.config(bg=status)
-        else:
-            print("Invalid lane number. Use 1 or 2.")
+app.layout = html.Div([
+    daq.LEDDisplay(
+        id='my-LED-display-1',
+        label="Default",
+        value=6
+    ),
+    dcc.Slider(
+        id='my-LED-display-slider-1',
+        min=0,
+        max=10,
+        step=1,
+        value=5
+    ),
+])
+
+@callback(
+    Output('my-LED-display-1', 'value'),
+    Input('my-LED-display-slider-1', 'value')
+)
+def update_output(value):
+    return str(value)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
