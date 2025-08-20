@@ -35,10 +35,10 @@ shutdown_countdown = 10  # seconds before shutdown
 #rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
 
 # current RFID and VID values
-currentVID1 = "init"
-currentVID2 = "init"
-currentRFID1 = "init"
-currentRFID2 = "init"
+currentVID1 = "empty"
+currentVID2 = "empty"
+currentRFID1 = "empty"
+currentRFID2 = "empty"
 
 # previous RFID and VID values for counting
 prevRFID1 = "init" # previous RFID for lane 1
@@ -86,7 +86,7 @@ except serial.SerialException as e:
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
-    ser3 = serial.Serial('COM14', baudrate=9600)
+    ser3 = serial.Serial('COM18', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -154,7 +154,8 @@ def get_current_vid():
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
 # testing database stuff
-conn = sqlite3.connect('vid_data.db') # create or connect to the database
+conn = sqlite3.connect('vid_data.db', check_same_thread = False) # create or connect to the database
+# MAKE SURE ONLY THIS SCRIPT WRITES, NOTHING ELSE TO AVOID CONFLICTS
 cursor = conn.cursor() # create a cursor object to execute SQL commands
 
 cursor.execute('''
@@ -178,8 +179,7 @@ conn.commit()  # commit the changes to the database
 Main Loop - this will run continuously to read from queues and process data
 '''
 while True:
-    # time of event
-    now = dt.datetime.now()
+    now = dt.datetime.now()  # get current time for logging
 
     # lane 1 RFID reader queue
     if queue1.empty():
@@ -221,6 +221,7 @@ while True:
         elif vidIn.startswith("2"): # VID for lane 2
             currentVID2 = vidIn
 
+
     if currentVID1 != "empty":
         #print("VID Lane 1 Read: " + repr(currentVID1))
         pass
@@ -230,17 +231,20 @@ while True:
         print("VID Lane 2 Read: " + repr(currentVID2))
         # serial write
 
+    # testing RFID stuff
+    currentRFID1 = "1-BBT9999,12344321"
+    currentRFID2 = "2-BBT2809,00000000"  # testing RFID for lane 2
+
     # testing database update
     update_lane_data(cursor, 1, currentVID1, currentRFID1)  # update lane 1 data in the database
+    update_lane_data(cursor, 2, currentVID2, currentRFID2)  # update lane 2 data in the database
     conn.commit()  # commit the changes to the database
 
+    print("lane 1: " + str(read_lane_data(cursor, 1)))  # print lane 1 data for testing
+    print("lane 2: " + str(read_lane_data(cursor, 2)))  # print lane 2 data for testing
     # true or false if results match for lane 1
     matchresult1 = vid_to_fleet_number(currentVID1) == vid_to_fleet_number(currentRFID1) and currentVID1 != "empty" and currentRFID1 != "empty"
     matchresult2 = vid_to_fleet_number(currentVID2) == vid_to_fleet_number(currentRFID2) and currentVID2 != "empty" and currentRFID2 != "empty"
-    
-    # testing database retrieve
-    vid1, rfid1 = read_lane_data(cursor, 1)  # read lane 1 data from the database
-    print(f"Lane 1: VID={vid1}, RFID={rfid1}")
 
     # RFID data only recorded if certain read conditions are met
 
