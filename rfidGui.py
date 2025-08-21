@@ -1,6 +1,6 @@
 from dash import Dash, html, dcc, callback, Output, Input
 import dash_daq as daq
-from rfidUtilTesting import read_lane_data
+from rfidUtil import read_lane_data
 import sqlite3
 
 # Initialize the Dash app
@@ -141,7 +141,7 @@ def update_lanes(n_intervals):
     
     vid1Val, color = update_lane_led(vid1)
     vid2Val, color2 = update_lane_led(vid2)
-    
+
     rfid1Val, rfidCol1 = update_lane_led(rfid1)
     rfid2Val, rfidCol2 = update_lane_led(rfid2)
 

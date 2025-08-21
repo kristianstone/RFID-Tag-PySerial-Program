@@ -45,3 +45,18 @@ def is_vid_in_scope(fleet_number, fleetList):
 def tag_battery_check(tagString):
     if tagString.startswith('n'):
         return "Low Battery Detected: " + tagString
+
+# function to update lane data in the database
+def update_lane_data(cursor, lane, vid, rfid):
+    cursor.execute('UPDATE vid_data SET vid=?, rfid=? WHERE lane=?', (vid, rfid, lane))
+    #conn.commit()  # commit the changes to the database
+
+# function to read data from the database
+def read_lane_data(cursor, lane):
+    cursor.execute('SELECT vid, rfid FROM vid_data WHERE lane=?', (lane,))
+    row = cursor.fetchone() # retreives info for the specified lane
+    if row:
+        vid, rfid = row
+        return vid, rfid
+    else:
+        return None, None

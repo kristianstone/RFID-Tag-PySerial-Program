@@ -7,11 +7,11 @@ import time
 import os
 import revpimodio2
 import sys
-import tkinter as tk
+import sqlite3
 
 from rfidClasses import *
 from rfidUtil import *
-from rfidGui import RfidGui
+
 
 # CSV file for fleet list
 csvFleetList = 'fleet_list.csv' 
@@ -24,10 +24,10 @@ rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO
 rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
 
 # current RFID and VID values
-currentVID1 = "init"
-currentVID2 = "init"
-currentRFID1 = "init"
-currentRFID2 = "init"
+currentVID1 = "empty"
+currentVID2 = "empty"
+currentRFID1 = "empty"
+currentRFID2 = "empty"
 
 # previous RFID and VID values for counting
 prevRFID1 = "init" # previous RFID for lane 1
@@ -195,21 +195,35 @@ r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 
 r2 = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
+# database initialization
+conn = sqlite3.connect('vid_data.db', check_same_thread = False) # create or connect to the database
+# MAKE SURE ONLY THIS SCRIPT WRITES, NOTHING ELSE TO AVOID CONFLICTS
+cursor = conn.cursor() # create a cursor object to execute SQL commands
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS vid_data (
+            lane INTEGER PRIMARY KEY,
+            vid TEXT,
+            rfid TEXT
+    )
+''')  # creates table with limited columns
+
+conn.commit()  # commit the changes to the database
+
+# initialize a column for each lane
+for lane in [1, 2]:
+    cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
+conn.commit()  # commit the changes to the database
 
 '''
 Main Loop - this will run continuously to read from queues and process data
 '''
 while True:
-    # gui stuff
-    #root = tk.Tk()
-    #appGui = RfidGui(root)  # create the GUI instance
-    #root.mainloop()  # start the GUI event loop
     # time of event
     now = dt.datetime.now()
 
     # lane 1 RFID reader queue
-    if queue1.empty():
-        #appGui.update_lane(1, 'blue')  
+    if queue1.empty():  
         reader1.change_tag("empty")
         currentRFID1 = "empty" # this variable shouldnt be used, should use class get_tag
         emptyCounter1 += 1 # increment the empty counter for RFID reader 1
@@ -228,9 +242,6 @@ while True:
         
         prevRFID1 = currentRFID1  # update previous RFID for lane 1
         #print("RFID Lane 1 Read: " + repr(currentRFID1)) # print the current RFID for testing purposes
-
-        # testing gui stuff
-        #appGui.update_lane(1, 'green')  # update lane 1 status to green in GUI
 
     # lane 2 RFID reader queue
     if queue2.empty():
@@ -280,6 +291,11 @@ while True:
     if currentVID2 != "empty":
         #print("VID Lane 2 Read: " + repr(currentVID2))
         ser4.write(currentVID2.encode('utf-8'))  # send to serial port 4
+
+    # Update SQL Database
+    update_lane_data(cursor, 1, currentVID1, currentRFID1)  # update lane 1 data in the database
+    update_lane_data(cursor, 2, currentVID2, currentRFID2)  # update lane 2 data in the database
+    conn.commit()  # commit the changes to the database
 
     # true or false if results match for lane 1
     matchresult1 = vid_to_fleet_number(currentVID1) == vid_to_fleet_number(currentRFID1) and currentVID1 != "empty" and currentRFID1 != "empty"

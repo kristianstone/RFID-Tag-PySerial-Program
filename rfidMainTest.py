@@ -143,10 +143,6 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
         #rpi.io.RevPiOutput.value = 1 # turn on LED
         sys.exit()
 
-# testing retreiving reader tag
-def get_current_vid():
-    return currentVID1
-
 
 # creating each thread to receive data from readers
 #r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
