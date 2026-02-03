@@ -156,18 +156,19 @@ def batteryStatus(tagId) -> str:
         
 
 # considering another column which has flags that describe the mismatch issue
-def log_result(now, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, match):
+def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, batteryStatus, match):
     """
     Stores the results of the program into a CSV file for data analysis. 
-    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, match
+    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, batteryStatus, match
 
     Args:
-        now: The current date and time
-        lane: Which lane the RFID/ VID reading occured
+        when: The current date and time
+        tagOrigin: Which lane the RFID/ VID reading occured
         vidMsg: String received by the VID
         rfidMsg: String converted from the RFID string
-        rfidPeriod: seconds this rfid has been continuously seen
         rfidNum: String received by the RFID reader
+        rfidPeriod: seconds this rfid has been continuously seen
+        batteryStatus: battery status        
         match: Bool if vidMsg == rfidMsg
     
     Raises:
@@ -175,27 +176,28 @@ def log_result(now, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, match):
     """
     global resultsFile, current_log_date
     # check if the date has changed
-    if now.date() != current_log_date:
+    if when.date() != current_log_date:
         resultsFile = get_results_filename()  # create next results file name
-        current_log_date = now.date()  # update current log date
+        current_log_date = when.date()  # update current log date
 
     # create headers for csv file
     write_header = not os.path.exists(resultsFile) or os.stat(resultsFile).st_size == 0
 
     try:
         with open(resultsFile, 'a', newline='') as csvfile:
-            fieldnames = ['timestamp', 'lane', 'vidMsg', 'rfidMsg', 'rfidNum', 'rfidPeriod', 'match']
+            fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'rfidPeriod', 'batteryStatus', 'match']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if write_header: # write header only if the file is new or has changed date
                 writer.writeheader()
             writer.writerow({
-                'timestamp': now.strftime('%Y-%m-%d %H:%M:%S'),
-                'lane': lane,
-                'vidMsg': repr(vidMsg),
-                'rfidMsg': repr(rfidMsg),
-                'rfidNum': rfidNum,
-                'rfidPeriod': rfidPeriod,
-                'match': match
+                'timestamp'     : when.strftime('%Y-%m-%d %H:%M:%S'),
+                'tagOrigin'     : tagOrigin,
+                'vidMsg'        : repr(vidMsg),
+                'rfidMsg'       : repr(rfidMsg),
+                'rfidNum'       : rfidNum,
+                'rfidPeriod'    : rfidPeriod,
+                'batteryStatus' : batteryStatus,
+                'match'         : match
             })
     except Exception as e:
         print(f"Error writing to results file {resultsFile}: {e}")
