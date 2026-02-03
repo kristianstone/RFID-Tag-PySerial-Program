@@ -36,12 +36,22 @@ class Reader:
         """
         return self.status
 
+    def find_first_unprintable(self, s):
+        for i, char in enumerate(s):
+            if not char.isprintable():
+                return i  # Return the index immediately upon finding the first unprintable char
+        return None # Return None if no unprintable characters are found
+
     # get tag
     def get_tag(self):
         """
         Returns the string of the RFID tag/ VID Tag currently being detected
         """
-        return self.tagNumber
+        ## WAB strip off trailing unprintable
+        s = self.tagNumber
+        index = self.find_first_unprintable(s)
+        ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
+        return self.tagNumber[:index]
     
     # change status
     def change_status(self, newStatus):
@@ -90,6 +100,3 @@ class Reader:
                     self.fleetNumber = x[0] # update the fleet number
 
         return self.fleetNumber 
-
-
-    # check battery if prefix is 'N' or 'n'

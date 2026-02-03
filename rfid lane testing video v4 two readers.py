@@ -20,8 +20,8 @@ emptyCounter1 = 0 # for reader 1
 emptyCounter2 = 0 # for reader 2
 
 # create reader - this should make it easier having two readers
-reader1 = Reader(False, "empty") # initalize first reader
-reader2 = Reader(False, "empty") # second reader
+rfidReader1 = Reader(False, "empty") # initalize first reader
+rfidReader2 = Reader(False, "empty") # second reader
 
 # queue creation
 queue1 = queue.Queue() # queue for reader 1
@@ -82,13 +82,13 @@ while True:
 
     # could turn this into a for loop too
     # change colour for reader 1
-    if reader1.get_status() == True:
+    if rfidReader1.get_status() == True:
         line_colour1 = colour_dict["green"] 
     else: 
         line_colour1 = colour_dict["red"]
 
     # change colour for reader 2
-    if reader2.get_status() == True:
+    if rfidReader2.get_status() == True:
         line_colour2 = colour_dict["green"]
     else:
         line_colour2 = colour_dict["red"]
@@ -120,38 +120,38 @@ while True:
 
     # for reader 1
     if queue1.empty():
-        reader1.change_tag("empty")
+        rfidReader1.change_tag("empty")
         emptyCounter1 += 1 # increment for each empty print
     else:
-        reader1.change_tag(queue1.get(True))
-        f.write(now.strftime("%H:%M:%S ") + reader1.get_tag()) # save tag read to data file
+        rfidReader1.change_tag(queue1.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfidReader1.get_tag()) # save tag read to data file
 
     # for reader 2
     if queue2.empty():
-        reader2.change_tag("empty")
+        rfidReader2.change_tag("empty")
         emptyCounter2 += 1 # increment for each empty print
     else:
-        reader2.change_tag(queue2.get(True))
-        f.write(now.strftime("%H:%M:%S ") + reader2.get_tag()) # save tag read to data file
+        rfidReader2.change_tag(queue2.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfidReader2.get_tag()) # save tag read to data file
                     
     # reader 1 checks 
-    if reader1.get_tag() == "empty" and emptyCounter1 > 30:
-        reader1.change_status(False)
+    if rfidReader1.get_tag() == "empty" and emptyCounter1 > 30:
+        rfidReader1.change_status(False)
         readerText1 = "No Read" # update video text
 
-    if reader1.get_tag()[0] == "R":
-        reader1.change_status(True)
-        readerText1 = reader1.get_tag().rstrip()
+    if rfidReader1.get_tag()[0] == "R":
+        rfidReader1.change_status(True)
+        readerText1 = rfidReader1.get_tag().rstrip()
         emptyCounter1 = 0
 
     # reader 2 checks
-    if reader2.get_tag() == "empty" and emptyCounter2 > 30:
-        reader2.change_status(False)
+    if rfidReader2.get_tag() == "empty" and emptyCounter2 > 30:
+        rfidReader2.change_status(False)
         readerText2 = "No Read" # update video text
 
-    if reader2.get_tag()[0] == "R":
-        reader2.change_status(True)
-        readerText2 = reader2.get_tag().rstrip()
+    if rfidReader2.get_tag()[0] == "R":
+        rfidReader2.change_status(True)
+        readerText2 = rfidReader2.get_tag().rstrip()
         emptyCounter2 = 0
     
     f.close() # close after writing

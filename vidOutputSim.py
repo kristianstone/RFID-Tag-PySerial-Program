@@ -9,7 +9,7 @@ Serial Port Allocations
 
 '''
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux or COM15 on Windows
-ser3 = serial.Serial('COM17', baudrate=9600)
+ser3 = serial.Serial('COM18', baudrate=9600)
 line = "1-BBT4321,12344321" + '\r\n' # CR and LF as per VID 800
 line2 = "2-BBT2809,00000000" + '\r\n'
 line4 = "1-BBT1234,0000000"

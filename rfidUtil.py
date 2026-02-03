@@ -24,13 +24,13 @@ def get_results_filename():
     return f"results_{dt.datetime.now().strftime('%Y%m%d')}.csv"
 
 # extract fleet number from VID String
-def vid_to_fleet_number(vid_string):
+def msg2BusNum(msg):
     # assuming the VID string is formatted as "1-BBT<fleet_number>,00000000"
     try:
-        return vid_string.split(',')[0][5:]
+        return msg.split(',')[0][5:]
     except Exception as e: #Might make index error
         # might include more logic here to handle different formats
-        print(f"Error extracting fleet number: '{vid_string}': {e}")
+        print(f"Error extracting fleet number: '{msg}': {e}")
         return None
 
 # function to check if VID string is in scope

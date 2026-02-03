@@ -24,7 +24,7 @@ def get_results_filename():
     return f"results_{dt.datetime.now().strftime('%Y%m%d')}.csv"
 
 # extract fleet number from VID String
-def vid_to_fleet_number(vid_string):
+def msg2BusNum(vid_string):
     # assuming the VID string is formatted as "1-BBT<fleet_number>,00000000"
     try:
         return vid_string.split(',')[0][5:]
