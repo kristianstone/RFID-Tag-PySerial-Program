@@ -44,8 +44,8 @@ prevFuelScanMsgFromRFID2 = "init" # previous RFID for lane 2
 seqNumFuelScanMsgFromRFID1 = 0 # counter for RFID reader 1
 seqNumFuelScanMsgFromRFID2 = 0 # counter for RFID reader 2
 
-emptyCounter1 = 0 # counter for empty reads on RFID reader 1
-emptyCounter2 = 0 # counter for empty reads on RFID reader 2
+rfid1NullPolls = 0 # counter for empty reads on RFID reader 1
+rfid2NullPolls = 0 # counter for empty reads on RFID reader 2
 
 NO_READ_LIMIT = 3 # number of empty reads before resetting the counter
 
@@ -54,17 +54,17 @@ readCount1 = 5 # required read count for RFID reader 1
 readCount2 = 5 # required read count for RFID reader 2
 
 # create reader - this should make it easier having two readers
-rfidReader1 = Reader(False, "empty") # initalize first reader
-rfidReader2 = Reader(False, "empty") # second reader
+rfid1Reader = Reader(False, "empty") # initalize first reader
+rfid2Reader = Reader(False, "empty") # second reader
 
 # may eventually use this properly, but for now just using global variables
 vidLane1 = Reader(False, "empty") # VID detector lane 1
 vidLane2 = Reader(False, "empty") # VID detector lane 2
 
 # queue creation
-queue1 = queue.Queue() # queue for reader 1
-queue2 = queue.Queue() # queue for reader 2
-queue3 = queue.Queue() # queue for VID detector
+rfid1Queue = queue.Queue() # queue for reader 1
+rfid2Queue = queue.Queue() # queue for reader 2
+vidQueue = queue.Queue() # queue for VID detector
 
 '''
 Serial Port Allocations
@@ -99,11 +99,11 @@ def serial_read(s, readerName):
         try:
             sline = s.readline()
             if readerName == "R1:": # add to reader 1 queue
-                queue1.put(sline.decode('utf-8'))
+                rfid1Queue.put(sline.decode('utf-8'))
             elif readerName == "R2:": # add to reader 2 queue
-                queue2.put(sline.decode('utf-8')) # may consider bringing readerName back
+                rfid2Queue.put(sline.decode('utf-8')) # may consider bringing readerName back
             else: # add to VID queue
-                queue3.put(sline.decode('utf-8'))
+                vidQueue.put(sline.decode('utf-8'))
         except Exception as e:
             print(f"Error reading from {readerName}: {e}")
             #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -174,19 +174,19 @@ while True:
     now = dt.datetime.now()  # get current time for logging
 
     # lane 1 RFID reader queue
-    if queue1.empty():
-        rfidReader1.change_tag("empty")
+    if rfid1Queue.empty():
+        rfid1Reader.change_tag("empty")
         rfid1FuelScanMsg = "empty" # this variable shouldnt be used, should use class get_tag
-        emptyCounter1 += 1 # increment the empty counter for RFID reader 1
+        rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
         
-        if emptyCounter1 >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
+        if rfid1NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
             seqNumFuelScanMsgFromRFID1 = 0 
 
     else:
-        emptyCounter1 = 0 # reset empty counter if queue is not empty
-        rfidReader1.change_tag(queue1.get(True))
+        rfid1NullPolls = 0 # reset empty counter if queue is not empty
+        rfid1Reader.change_tag(rfid1Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid1FuelScanMsg = "1-BBT" + rfidReader1.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
+        rfid1FuelScanMsg = "1-BBT" + rfid1Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
         seqNumFuelScanMsgFromRFID1 += 1
         if rfid1FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read
@@ -199,7 +199,7 @@ while True:
     vidsList = []
     while True:
         try:
-            vid_input = queue3.get_nowait()
+            vid_input = vidQueue.get_nowait()
             vidsList.append(vid_input)
         except queue.Empty:
             break
@@ -244,10 +244,10 @@ while True:
     # lane 1 comparison - ser4 should be writing the VID anyway
     #if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid1Msg == rfid1FuelScanMsg: added after trial
         # in future, this will be written to plc, for now just record
-        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfidReader1.get_tag(), vid1MatchesRfid1)
+        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
     # record regardless of RFID, but only if VID is in scope
     #elif vid1Msg != "empty" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
-        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfidReader1.get_tag(), vid1MatchesRfid1)
+        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
         #ser4.write(vid1Msg.encode('utf-8')) # send to serial port 4
 
     if seqNumFuelScanMsgFromRFID1 > readCount1:
