@@ -24,34 +24,36 @@ rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO
 rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
 
 # VID values
-vid1Msg = "empty"
-vid2Msg = "empty"
+vid1Msg = "EMPTY"
+vid2Msg = "EMPTY"
 vid1MsgCnt = 0
 vid2MsgCnt = 0
+vidsListSize = 0
 
 # RFID values
-rfid1FuelScanMsg = "empty"
-rfid2FuelScanMsg = "empty"
+rfid1FuelScanMsg = "EMPTY"
+rfid2FuelScanMsg = "EMPTY"
 # previous RFID and VID values for counting
-rfid1PrevFuelScanMsg = "init" # previous RFID for lane 1
-rfid2PrevFuelScanMsg = "init" # previous RFID for lane 2
+rfid1PrevFuelScanMsg = "INIT" # initial RFID for lane 1
+rfid2PrevFuelScanMsg = "INIT" # initial previous RFID for lane 2
 # RFID Reader Counters
 seqNumFuelScanMsgsFromRFID1 = 0 # counter for RFID reader 1
 seqNumFuelScanMsgsFromRFID2 = 0 # counter for RFID reader 2
 rfid1NullPolls = 0 # counter for empty reads on RFID reader 1
 rfid2NullPolls = 0 # counter for empty reads on RFID reader 2
+
 NO_READ_LIMIT = 3 # number of empty reads before resetting the counter
 # RFID Read Counts - Each lane may require different read counts
 READS_TO_TRUST_RFID = 5 # required read count for RFID reader
 
 
 # create reader - this should make it easier having two readers
-rfid1Reader = Reader(False, "empty") # initalize first reader
-rfid2Reader = Reader(False, "empty") # second reader
+rfid1Reader = Reader(False, "EMPTY") # initalize first reader
+rfid2Reader = Reader(False, "EMPTY") # second reader
 
 # may eventually use this properly, but for now just using global variables
-vidLane1 = Reader(False, "empty") # VID detector lane 1
-vidLane2 = Reader(False, "empty") # VID detector lane 2
+vidLane1 = Reader(False, "EMPTY") # VID detector lane 1
+vidLane2 = Reader(False, "EMPTY") # VID detector lane 2
 
 # queue creation
 rfid1Queue = queue.Queue() # queue for reader 1
@@ -145,12 +147,12 @@ def serial_read(s, readerName):
 
 def batteryStatus(tagId) -> str:
 
+    status = "unknown"
+
     if tagId[0] == 'N':
         status = "charged" 
     elif tagId[0] == 'n':
-        status = "replace"     
-    else:
-        status = "unknown"
+        status = "replace"
 
     return status
         
@@ -159,7 +161,7 @@ def batteryStatus(tagId) -> str:
 def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPolls, batteryStatus, match, rfidInBothLanes):
     """
     Stores the results of the program into a CSV file for data analysis. 
-    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, batteryStatus, match
+    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPolls, batteryStatus, match, rfidInBothLanes
 
     Args:
         when            : The current date and time
@@ -168,7 +170,7 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPo
         rfidMsg         : String converted from the RFID string
         rfidNum         : String received by the RFID reader
         rfidPeriod      : seconds this rfid has been continuously seen
-        rfidNullPolls       : count of polls when queue was empty
+        rfidNullPolls   : count of polls when queue was empty
         batteryStatus   : battery status        
         match           : True if vidMsg == rfidMsg
         rfidInBothLanes : rfid detected by both readers
@@ -198,6 +200,7 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPo
                 'rfidMsg'           : repr(rfidMsg),
                 'rfidNum'           : rfidNum,
                 'rfidPeriod'        : rfidPeriod,
+                'rfidNullPolls'     : rfidNullPolls,
                 'batteryStatus'     : batteryStatus,
                 'match'             : match,
                 'rfidInBothLanes'   : rfidInBothLanes
@@ -244,13 +247,13 @@ while True:
     # lane 1 RFID reader queue
     if rfid1Queue.empty():  
         rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
-        rfid1Reader.change_tag("nullPoll")
-        rfid1FuelScanMsg = "nullPoll"         
+        rfid1Reader.change_tag("POLLING")
+        rfid1FuelScanMsg = "POLLING"         
 
         if rfid1NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgsFromRFID resets if too many empty reads
             seqNumFuelScanMsgsFromRFID1 = 0 
-            rfid1Reader.change_tag("empty")
-            rfid1FuelScanMsg = "empty" # this variable shouldnt be used, should use class get_tag            
+            rfid1Reader.change_tag("EMPTY")
+            rfid1FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag            
     else:
         rfid1NullPolls = 0 # reset empty counter if queue is not empty
         rfid1Reader.change_tag(rfid1Queue.get(True))
@@ -266,13 +269,13 @@ while True:
     # lane 2 RFID reader queue
     if rfid2Queue.empty():
         rfid2NullPolls += 1
-        rfid1Reader.change_tag("nullPoll")
-        rfid1FuelScanMsg = "nullPoll" 
+        rfid2Reader.change_tag("POLLING")
+        rfid2FuelScanMsg = "POLLING" 
 
         if rfid2NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgsFromRFID resets if too many empty reads
             seqNumFuelScanMsgsFromRFID2 = 0
-            rfid2Reader.change_tag("empty")
-            rfid2FuelScanMsg = "empty"                   
+            rfid2Reader.change_tag("EMPTY")
+            rfid2FuelScanMsg = "EMPTY"                   
     else:
         rfid2NullPolls = 0
         rfid2Reader.change_tag(rfid2Queue.get(True))
@@ -294,8 +297,8 @@ while True:
         except queue.Empty:
             break
 
-    vid1Msg = "empty"  # default value for VID lane 1
-    vid2Msg = "empty"  # default value for VID lane 2
+    vid1Msg = "EMPTY"  # default value for VID lane 1
+    vid2Msg = "EMPTY"  # default value for VID lane 2
 
     vidsListSize = len(vidsList)
 
@@ -310,13 +313,13 @@ while True:
 
     # forward the messages 
     # these are to be removed in the final build
-    if vid1Msg != "empty":
+    if vid1Msg != "EMPTY":
         #print("VID Lane 1 Read: " + repr(vid1Msg))
         ser4.write(vid1Msg.encode('utf-8'))  # send to serial port 4
     else:
         vid1MsgCnt = 0
            
-    if vid2Msg != "empty":
+    if vid2Msg != "EMPTY":
         #print("VID Lane 2 Read: " + repr(vid2Msg))
         ser4.write(vid2Msg.encode('utf-8'))  # send to serial port 4
     else:
@@ -333,16 +336,16 @@ while True:
 
     # true or false if results match for lane 1
     vid1MatchesRfid1 = "v!=r"
-    if (vid1Msg != "empty" and rfid1FuelScanMsg != "empty" and (msg2BusNum(vid1Msg) == msg2BusNum(rfid1FuelScanMsg))):
+    if (vid1Msg != "EMPTY" and rfid1FuelScanMsg != "EMPTY" and (msg2BusNum(vid1Msg) == msg2BusNum(rfid1FuelScanMsg))):
         vid1MatchesRfid1 = "V==R"        
 
     vid2MatchesRfid2 = "v!=r"
-    if (vid2Msg != "empty" and rfid2FuelScanMsg != "empty" and (msg2BusNum(vid2Msg) == msg2BusNum(rfid2FuelScanMsg))):
+    if (vid2Msg != "EMPTY" and rfid2FuelScanMsg != "EMPTY" and (msg2BusNum(vid2Msg) == msg2BusNum(rfid2FuelScanMsg))):
         vid2MatchesRfid2 = "V==R"
 
-    rfidInBothLanes = "1lane"
+    rfidInBothLanes = "LANE_1"
     if(rfid1FuelScanMsg == rfid2FuelScanMsg):
-        rfidInBothLanes = "2LANE"
+        rfidInBothLanes = "LANE_2"
     
     # RFID data only recorded if certain read conditions are met
 
@@ -353,7 +356,7 @@ while True:
         log_result(now, 'rfid1', vid1Msg, rfid1FuelScanMsg, tagId, seqNumFuelScanMsgsFromRFID1, rfid1NullPolls, batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
     
     # record regardless of RFID, but only if VID is in scope
-    elif vid1Msg != "empty" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
+    elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
         tagId = rfid1Reader.get_tag()
         log_result(now, 'vid1', vid1Msg, rfid1FuelScanMsg, tagId, vid1MsgCnt, vidsListSize, batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
         #ser4.write(vid1Msg.encode('utf-8')) # send to serial port 4
@@ -363,7 +366,7 @@ while True:
         tagId = rfid2Reader.get_tag()      
         log_result(now, 'rfid2', vid2Msg, rfid2FuelScanMsg, tagId, seqNumFuelScanMsgsFromRFID2 ,rfid2NullPolls, batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
     
-    elif vid2Msg != "empty" and is_vid_in_scope(msg2BusNum(vid2Msg), csvFleetList):
+    elif vid2Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid2Msg), csvFleetList):
         tagId = rfid2Reader.get_tag()
         log_result(now, 'vid2', vid2Msg, rfid2FuelScanMsg, tagId, vid2MsgCnt, vidsListSize, batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
         #ser4.write(vid2Msg.encode('utf-8')) # send to serial port 4

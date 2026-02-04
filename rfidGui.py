@@ -11,7 +11,7 @@ conn = sqlite3.connect('vid_data.db', check_same_thread=False) # create or conne
 cursor = conn.cursor() # create a cursor object to execute SQL commands
 
 def update_lane_led(value):
-    if value == "empty":
+    if value == "EMPTY":
         return "0", "#FF0000"  # Red for empty
     else:
         return value.split(',')[0][5:], "#00FF00"  # Green for valid VID

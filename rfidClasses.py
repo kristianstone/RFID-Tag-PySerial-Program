@@ -79,7 +79,7 @@ class Reader:
 
     Concerns:
     - misreads from RFID readers i.e. does not consider chars and will break
-    - rfid tags must be either a number or "empty"
+    - rfid tags must be either a number or "EMPTY"
     '''
     def get_fleetNumber(self, csvFile):
         """
@@ -90,7 +90,7 @@ class Reader:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
         """
         self.fleetNumber = "Tag Not Registered" # default not registered
-        if self.tagNumber == "empty":
+        if self.tagNumber == "EMPTY":
             return self.fleetNumber
 
         with open(csvFile, mode = 'r') as file: # read each row of csv file
