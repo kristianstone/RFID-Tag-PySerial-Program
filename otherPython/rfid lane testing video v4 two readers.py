@@ -120,18 +120,18 @@ while True:
 
     # for reader 1
     if rfid1Queue.empty():
-        rfid1Reader.change_tag("EMPTY")
+        rfid1Reader.update_tag("EMPTY")
         rfid1NullPolls += 1 # increment for each empty print
     else:
-        rfid1Reader.change_tag(rfid1Queue.get(True))
+        rfid1Reader.update_tag(rfid1Queue.get(True))
         f.write(now.strftime("%H:%M:%S ") + rfid1Reader.get_tag()) # save tag read to data file
 
     # for reader 2
     if rfid2Queue.empty():
-        rfid2Reader.change_tag("EMPTY")
+        rfid2Reader.update_tag("EMPTY")
         rfid2NullPolls += 1 # increment for each empty print
     else:
-        rfid2Reader.change_tag(rfid2Queue.get(True))
+        rfid2Reader.update_tag(rfid2Queue.get(True))
         f.write(now.strftime("%H:%M:%S ") + rfid2Reader.get_tag()) # save tag read to data file
                     
     # reader 1 checks 

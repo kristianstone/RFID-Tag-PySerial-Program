@@ -175,7 +175,7 @@ while True:
 
     # lane 1 RFID reader queue
     if rfid1Queue.empty():
-        rfid1Reader.change_tag("EMPTY")
+        rfid1Reader.update_tag("EMPTY")
         rfid1FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag
         rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
         
@@ -184,7 +184,7 @@ while True:
 
     else:
         rfid1NullPolls = 0 # reset empty counter if queue is not empty
-        rfid1Reader.change_tag(rfid1Queue.get(True))
+        rfid1Reader.update_tag(rfid1Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
         rfid1FuelScanMsg = "1-BBT" + rfid1Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
         seqNumFuelScanMsgFromRFID1 += 1

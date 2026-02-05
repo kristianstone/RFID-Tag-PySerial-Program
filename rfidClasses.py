@@ -12,7 +12,7 @@ class Reader:
           get_status: 
           get_tag: A string of the RFID tag/ VID Tag currently being detected
           change_status: 
-          change_tag: Function to update the tag being detected
+          update_tag: Function to update the tag being detected
           get_fleetNumber: Function to convert RFID tag into a VID 800 format string
 
     """
@@ -28,6 +28,7 @@ class Reader:
         """
         self.status = status # instance attribute 
         self.tagNumber = tagNumber # instance attribute
+        self.lastTagNumer = tagNumber
 
     # get status - not required but will leave for video testing
     def get_status(self):
@@ -52,7 +53,18 @@ class Reader:
         index = self.find_first_unprintable(s)
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         return self.tagNumber[:index]
-    
+
+    # get tag
+    def get_last_tag(self):
+        """
+        Returns the string of theLast  RFID tag/ VID Tag detected
+        """
+        ## WAB strip off trailing unprintable
+        s = self.lastTagNumber
+        index = self.find_first_unprintable(s)
+        ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
+        return self.lastTagNumber[:index]
+
     # change status
     def change_status(self, newStatus):
         """
@@ -64,13 +76,16 @@ class Reader:
         self.status = newStatus
 
     # change tag
-    def change_tag(self, newTag):
+    def update_tag(self, newTag):
         """
         Function to update the tag being read by the RFID Reader/ VID 800
 
         Args:
             newTag: New tag string
         """
+
+        if(newTag[0] == 'n' or newTag[0] == 'N') :
+            self.lastTagNumer = self.tagNumber
         self.tagNumber = newTag
 
 
