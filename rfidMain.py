@@ -158,7 +158,7 @@ def batteryStatus(tagId) -> str:
         
 
 # considering another column which has flags that describe the mismatch issue
-def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, seqNum, nullPolls, batteryStatus, match, rfidInBothLanes):
+def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, prevRfidNum, seqNum, nullPolls, batteryStatus, match, rfidInBothLanes):
     """
     Stores the results of the program into a CSV file for data analysis. 
     Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, seqNum, rfidNullPolls, batteryStatus, match, rfidInBothLanes
@@ -189,7 +189,7 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, seqNum, nullPolls, bat
 
     try:
         with open(resultsFile, 'a', newline='') as csvfile:
-            fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'seqNum', 'nullPolls', 'batteryStatus', 'match', 'rfidInBothLanes']
+            fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'prevRfidNum','seqNum', 'nullPolls', 'batteryStatus', 'match', 'rfidInBothLanes']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if write_header: # write header only if the file is new or has changed date
                 writer.writeheader()
@@ -199,6 +199,7 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, seqNum, nullPolls, bat
                 'vidMsg'            : repr(vidMsg),
                 'rfidMsg'           : repr(rfidMsg),
                 'rfidNum'           : rfidNum,
+                'prevRfidNum'       : prevRfidNum,
                 'seqNum'            : seqNum,
                 'nullPolls'         : nullPolls,
                 'batteryStatus'     : batteryStatus,

@@ -25,10 +25,11 @@ class Reader:
         Args:
             status: No longer required
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
+            lastTagNumber
         """
         self.status = status # instance attribute 
         self.tagNumber = tagNumber # instance attribute
-        self.lastTagNumer = tagNumber
+        self.lastTagNumber = tagNumber
 
     # get status - not required but will leave for video testing
     def get_status(self):
@@ -85,7 +86,7 @@ class Reader:
         """
 
         if(newTag[0] == 'n' or newTag[0] == 'N') :
-            self.lastTagNumer = self.tagNumber
+            self.lastTagNumber = self.tagNumber
         self.tagNumber = newTag
 
 
@@ -104,14 +105,13 @@ class Reader:
         Args:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
         """
-        self.fleetNumber = "Tag Not Registered" # default not registered
-        if self.tagNumber == "EMPTY":
-            return self.fleetNumber
+        self.fleetNumber = "Tag Unknown" # default not registered
 
-        with open(csvFile, mode = 'r') as file: # read each row of csv file
-            tagNum = self.tagNumber[1:] # remove the prefix 'N' or 'n'
-            for x in csv.reader(file): 
-                if str(int(tagNum)) == str(x[1]): # checks if it exists in the list
-                    self.fleetNumber = x[0] # update the fleet number
+        if ((self.tagNumber[0] == 'N') or (self.tagNumber[0] == 'n')) :
+            with open(csvFile, mode = 'r') as file: # read each row of csv file
+                tagNum = self.tagNumber[1:] # remove the prefix 'N' or 'n'
+                for x in csv.reader(file): 
+                    if str(int(tagNum)) == str(x[1]): # checks if it exists in the list
+                        self.fleetNumber = x[0] # update the fleet number
 
         return self.fleetNumber 
