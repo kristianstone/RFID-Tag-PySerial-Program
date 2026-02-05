@@ -37,8 +37,8 @@ rfid2FuelScanMsg = "EMPTY"
 rfid1PrevFuelScanMsg = "INIT" # initial RFID for lane 1
 rfid2PrevFuelScanMsg = "INIT" # initial previous RFID for lane 2
 # RFID Reader Counters
-seqNumFuelScanMsgsFromRFID1 = 0 # counter for RFID reader 1
-seqNumFuelScanMsgsFromRFID2 = 0 # counter for RFID reader 2
+rfid1SeqNumFuelScanMsg = 0 # counter for RFID reader 1
+rfid2SeqNumFuelScanMsg = 0 # counter for RFID reader 2
 rfid1NullPolls = 0 # counter for empty reads on RFID reader 1
 rfid2NullPolls = 0 # counter for empty reads on RFID reader 2
 
@@ -147,21 +147,21 @@ def serial_read(s, readerName):
 
 def batteryStatus(tagId) -> str:
 
-    status = "unknown"
+    status = "NO_BATT"
 
     if tagId[0] == 'N':
-        status = "charged" 
+        status = "CHARGED_BATT" 
     elif tagId[0] == 'n':
-        status = "replace"
+        status = "REPLACE_BATT"
 
     return status
         
 
 # considering another column which has flags that describe the mismatch issue
-def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPolls, batteryStatus, match, rfidInBothLanes):
+def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, seqNum, nullPolls, batteryStatus, match, rfidInBothLanes):
     """
     Stores the results of the program into a CSV file for data analysis. 
-    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPolls, batteryStatus, match, rfidInBothLanes
+    Data is placed into columns: timestamp, lane, vidMsg, rfidMsg, rfidNum, seqNum, rfidNullPolls, batteryStatus, match, rfidInBothLanes
 
     Args:
         when            : The current date and time
@@ -169,8 +169,8 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPo
         vidMsg          : String received by the VID
         rfidMsg         : String converted from the RFID string
         rfidNum         : String received by the RFID reader
-        rfidPeriod      : seconds this rfid has been continuously seen
-        rfidNullPolls   : count of polls when queue was empty
+        seqNum      : seconds this rfid has been continuously seen
+        nullPolls   : count of polls when queue was empty
         batteryStatus   : battery status        
         match           : True if vidMsg == rfidMsg
         rfidInBothLanes : rfid detected by both readers
@@ -189,18 +189,18 @@ def log_result(when, tagOrigin, vidMsg, rfidMsg, rfidNum, rfidPeriod, rfidNullPo
 
     try:
         with open(resultsFile, 'a', newline='') as csvfile:
-            fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'rfidPeriod', 'rfidNullPolls', 'batteryStatus', 'match', 'rfidInBothLanes']
+            fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'seqNum', 'nullPolls', 'batteryStatus', 'match', 'rfidInBothLanes']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if write_header: # write header only if the file is new or has changed date
                 writer.writeheader()
             writer.writerow({
-                'timestamp'         : when.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
+                'timestamp'         : when.strftime('%Y-%m-%d, %H:%M:%S.%f')[:-3],
                 'tagOrigin'         : tagOrigin,
                 'vidMsg'            : repr(vidMsg),
                 'rfidMsg'           : repr(rfidMsg),
                 'rfidNum'           : rfidNum,
-                'rfidPeriod'        : rfidPeriod,
-                'rfidNullPolls'     : rfidNullPolls,
+                'seqNum'            : seqNum,
+                'nullPolls'         : nullPolls,
                 'batteryStatus'     : batteryStatus,
                 'match'             : match,
                 'rfidInBothLanes'   : rfidInBothLanes
@@ -219,7 +219,7 @@ vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID de
 
 # database initialization
 conn = sqlite3.connect('vid_data.db', check_same_thread = False) # create or connect to the database
-# MAKE SURE ONLY THIS SCRIPT WRITES, NOTHING ELSE TO AVOID CONFLICTS
+# MAKE SURE ONLY THIS SCRIPT WRITES, TO AVOID CONFLICTS
 cursor = conn.cursor() # create a cursor object to execute SQL commands
 
 cursor.execute('''
@@ -237,6 +237,8 @@ for lane in [1, 2]:
     cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
 conn.commit()  # commit the changes to the database
 
+
+
 '''
 Main Loop - this will run continuously to read from queues and process data
 '''
@@ -247,21 +249,21 @@ while True:
     # lane 1 RFID reader queue
     if rfid1Queue.empty():  
         rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
-        rfid1Reader.change_tag("POLLING")
-        rfid1FuelScanMsg = "POLLING"         
+        rfid1Reader.change_tag("T1_POLLING" + str(rfid1NullPolls))
+        rfid1FuelScanMsg = "R1_POLLING"        
 
         if rfid1NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgsFromRFID resets if too many empty reads
-            seqNumFuelScanMsgsFromRFID1 = 0 
+            rfid1SeqNumFuelScanMsg = 0 
             rfid1Reader.change_tag("EMPTY")
             rfid1FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag            
     else:
         rfid1NullPolls = 0 # reset empty counter if queue is not empty
         rfid1Reader.change_tag(rfid1Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid1FuelScanMsg = "1-BBT" + rfid1Reader.get_fleetNumber(csvFleetList) + ",00000000" ##WAB + '\r\n' # not sure if new line required for final build
-        seqNumFuelScanMsgsFromRFID1 += 1
+        rfid1FuelScanMsg = "1-BBT" + rfid1Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' # VID 800 outputs \r\n in the msg
+        rfid1SeqNumFuelScanMsg += 1
         if rfid1FuelScanMsg != rfid1PrevFuelScanMsg:
-            seqNumFuelScanMsgsFromRFID1 = 0 # reset the counter to 0 if different tag is read
+            rfid1SeqNumFuelScanMsg = 0 # reset the counter to 0 if different tag is read
         
         rfid1PrevFuelScanMsg = rfid1FuelScanMsg  # update previous RFID for lane 1
         #print("RFID Lane 1 Read: " + repr(rfid1FuelScanMsg)) # print the current RFID for testing purposes
@@ -269,20 +271,20 @@ while True:
     # lane 2 RFID reader queue
     if rfid2Queue.empty():
         rfid2NullPolls += 1
-        rfid2Reader.change_tag("POLLING")
-        rfid2FuelScanMsg = "POLLING" 
+        rfid2Reader.change_tag("T2_POLLING" + str(rfid2NullPolls))
+        rfid2FuelScanMsg = "R2_POLLING" 
 
         if rfid2NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgsFromRFID resets if too many empty reads
-            seqNumFuelScanMsgsFromRFID2 = 0
+            rfid2SeqNumFuelScanMsg = 0
             rfid2Reader.change_tag("EMPTY")
             rfid2FuelScanMsg = "EMPTY"                   
     else:
         rfid2NullPolls = 0
         rfid2Reader.change_tag(rfid2Queue.get(True))
-        rfid2FuelScanMsg = "2-BBT" + rfid2Reader.get_fleetNumber(csvFleetList) + ",00000000" ##WAB + '\r\n' #VID 800 outputs \r and \n
-        seqNumFuelScanMsgsFromRFID2 += 1 # increment the counter for RFID reader 2
+        rfid2FuelScanMsg = "2-BBT" + rfid2Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' # VID 800 outputs \r\n in the msg
+        rfid2SeqNumFuelScanMsg += 1 # increment the counter for RFID reader 2
         if rfid2FuelScanMsg != rfid2PrevFuelScanMsg:
-            seqNumFuelScanMsgsFromRFID2 = 0
+            rfid2SeqNumFuelScanMsg = 0
         
         rfid2PrevFuelScanMsg = rfid2FuelScanMsg  # update previous RFID for lane 2
         #print("RFID Lane 2 Read: " + repr(rfid2FuelScanMsg)) # repr to show escape characters like \n
@@ -290,6 +292,7 @@ while True:
 
     # Flush VID detector queue
     vidsList = []
+
     while True:
         try:
             vid_input = vidQueue.get_nowait()
@@ -297,78 +300,78 @@ while True:
         except queue.Empty:
             break
 
-    vid1Msg = "EMPTY"  # default value for VID lane 1
-    vid2Msg = "EMPTY"  # default value for VID lane 2
+    vid1Msg = "EMPTY"   # default value for VID lane 1
+    vid1MsgCnt = 0      # more than 1 will indicate falling behind
+    vid2Msg = "EMPTY"   # default value for VID lane 2
+    vid2MsgCnt = 0      # more than 1 will indicate falling behind
 
     vidsListSize = len(vidsList)
 
     for vidIn in vidsList:
-        if vidIn.startswith("1"): # VID for lane 1
+        if vidIn.startswith("1"):   # VID msgs for lane 1            
             vid1Msg = vidIn
             vid1MsgCnt += 1
-        elif vidIn.startswith("2"): # VID for lane 2
+        elif vidIn.startswith("2"): # VID msgs for lane 2
             vid2Msg = vidIn
             vid2MsgCnt += 1
 
-
-    # forward the messages 
-    # these are to be removed in the final build
+    # forward the VID msgs 
+    # WAB ?? are to be removed for production build
     if vid1Msg != "EMPTY":
         #print("VID Lane 1 Read: " + repr(vid1Msg))
         ser4.write(vid1Msg.encode('utf-8'))  # send to serial port 4
-    else:
-        vid1MsgCnt = 0
            
     if vid2Msg != "EMPTY":
         #print("VID Lane 2 Read: " + repr(vid2Msg))
         ser4.write(vid2Msg.encode('utf-8'))  # send to serial port 4
-    else:
-        vid2MsgCnt = 0
-
 
 
     # Update SQL Database
+    # WAB what use is the SQL put to ?
     update_lane_data(cursor, 1, vid1Msg, rfid1FuelScanMsg)  # update lane 1 data in the database
     update_lane_data(cursor, 2, vid2Msg, rfid2FuelScanMsg)  # update lane 2 data in the database
     conn.commit()  # commit the changes to the database
 
 
-
-    # true or false if results match for lane 1
-    vid1MatchesRfid1 = "v!=r"
+    # Flags so if VID and RFID give same BUS Id
+    vid1MatchesRfid1 = "V1!=R1"
     if (vid1Msg != "EMPTY" and rfid1FuelScanMsg != "EMPTY" and (msg2BusNum(vid1Msg) == msg2BusNum(rfid1FuelScanMsg))):
-        vid1MatchesRfid1 = "V==R"        
+        vid1MatchesRfid1 = "V1==R1"        
 
-    vid2MatchesRfid2 = "v!=r"
+    vid2MatchesRfid2 = "V2!=R2"
     if (vid2Msg != "EMPTY" and rfid2FuelScanMsg != "EMPTY" and (msg2BusNum(vid2Msg) == msg2BusNum(rfid2FuelScanMsg))):
-        vid2MatchesRfid2 = "V==R"
+        vid2MatchesRfid2 = "V2==R2"
 
-    rfidInBothLanes = "LANE_1"
-    if(rfid1FuelScanMsg == rfid2FuelScanMsg):
-        rfidInBothLanes = "LANE_2"
+    # Flag if the RFId is seen in both lanes
+    rfidInBothLanes = "R_IN_NONE"
+    if(rfid1FuelScanMsg != "EMPTY" and rfid1FuelScanMsg != "EMPTY") :
+        if(rfid1FuelScanMsg == rfid2FuelScanMsg):
+            rfidInBothLanes = "R_IN_BOTH"
+        else :
+            rfidInBothLanes = "R_IN_ONE"
     
     # RFID data only recorded if certain read conditions are met
 
     # lane 1 comparison - ser4 should be writing the VID anyway
-    if seqNumFuelScanMsgsFromRFID1 > READS_TO_TRUST_RFID: #and vid1Msg == rfid1FuelScanMsg: added after trial
+    if rfid1SeqNumFuelScanMsg > READS_TO_TRUST_RFID: #and vid1Msg == rfid1FuelScanMsg: added after trial
         # in future, this will be written to plc, for now just record
         tagId = rfid1Reader.get_tag()     
-        log_result(now, 'rfid1', vid1Msg, rfid1FuelScanMsg, tagId, seqNumFuelScanMsgsFromRFID1, rfid1NullPolls, batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
+        log_result(now, 'rfid1', vid1Msg, rfid1FuelScanMsg, tagId, rfid1SeqNumFuelScanMsg, rfid1NullPolls, batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
     
     # record regardless of RFID, but only if VID is in scope
     elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
         tagId = rfid1Reader.get_tag()
-        log_result(now, 'vid1', vid1Msg, rfid1FuelScanMsg, tagId, vid1MsgCnt, vidsListSize, batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
+        log_result(now, 'vid1', vid1Msg, rfid1FuelScanMsg, tagId, vid1MsgCnt,               vidsListSize,   batteryStatus(tagId), vid1MatchesRfid1, rfidInBothLanes)
         #ser4.write(vid1Msg.encode('utf-8')) # send to serial port 4
     
     # lane 2 comparison
-    if seqNumFuelScanMsgsFromRFID2 > READS_TO_TRUST_RFID: #and vid2Msg == rfid2FuelScanMsg:
+    if rfid2SeqNumFuelScanMsg > READS_TO_TRUST_RFID: #and vid2Msg == rfid2FuelScanMsg:
         tagId = rfid2Reader.get_tag()      
-        log_result(now, 'rfid2', vid2Msg, rfid2FuelScanMsg, tagId, seqNumFuelScanMsgsFromRFID2 ,rfid2NullPolls, batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
+        log_result(now, 'rfid2', vid2Msg, rfid2FuelScanMsg, tagId, rfid2SeqNumFuelScanMsg, rfid2NullPolls, batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
     
     elif vid2Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid2Msg), csvFleetList):
         tagId = rfid2Reader.get_tag()
-        log_result(now, 'vid2', vid2Msg, rfid2FuelScanMsg, tagId, vid2MsgCnt, vidsListSize, batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
+        log_result(now, 'vid2', vid2Msg, rfid2FuelScanMsg, tagId, vid2MsgCnt,               vidsListSize,   batteryStatus(tagId), vid2MatchesRfid2, rfidInBothLanes)
         #ser4.write(vid2Msg.encode('utf-8')) # send to serial port 4
 
     time.sleep(0.9)  # sleep for a second before next iteration
