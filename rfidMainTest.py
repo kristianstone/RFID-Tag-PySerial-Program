@@ -72,7 +72,7 @@ Serial Port Allocations
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
 
 try:
-    ser1 = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
+    rfid1_In = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -82,7 +82,7 @@ except serial.SerialException as e:
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
-    ser3 = serial.Serial('COM21', baudrate=9600)
+    vid_In = serial.Serial('COM21', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -141,9 +141,9 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(ser1, "RFRD1:",)).start() # reader 1 thread
+r1 = threading.Thread(target=serial_read, args=(rfid1_In, "RFRD1:",)).start() # reader 1 thread
 
-vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
+vid = threading.Thread(target=serial_read, args=(vid_In, "VID",)).start() # VID detector thread
 
 # testing database stuff
 conn = sqlite3.connect('vid_data.db', check_same_thread = False) # create or connect to the database
@@ -241,14 +241,14 @@ while True:
 
     # RFID data only recorded if certain read conditions are met
 
-    # lane 1 comparison - ser4 should be writing the VID anyway
+    # lane 1 comparison - plc_Out should be writing the VID anyway
     #if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid1Msg == rfid1FuelScanMsg: added after trial
-        # in future, this will be written to plc, for now just record
+        # in future, this will be written to plc_Out, for now just record
         #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
     # record regardless of RFID, but only if VID is in scope
     #elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
         #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
-        #ser4.write(vid1Msg.encode('utf-8')) # send to serial port 4
+        #plc_Out.write(vid1Msg.encode('utf-8')) # send to serial port 4
 
     if seqNumFuelScanMsgFromRFID1 > readCount1:
         print("Lane 1 RFID Read Confirmed: " + repr(rfid1FuelScanMsg))

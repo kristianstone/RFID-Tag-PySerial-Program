@@ -62,7 +62,7 @@ Serial Port Allocations
 '''
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
 try:
-    ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
+    rfid1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -70,7 +70,7 @@ except serial.SerialException as e:
 
 # reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
 try:
-    ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
+    rfid2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 2: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -78,7 +78,7 @@ except serial.SerialException as e:
 
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
-    ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
+    vid_In = serial.Serial('/dev/ttyUSB2', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for VID detector: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -86,7 +86,7 @@ except serial.SerialException as e:
 
 # output serial port - port 4 - /dev/ttyUSB3 on linux
 try:
-    ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
+    plc_Out = serial.Serial('/dev/ttyUSB3', baudrate=9600)
 except serial.SerialException as e:
     print(f"Error opening serial port for output: {e}")
     rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -190,9 +190,9 @@ def shutdown_countdown_func():
 shutdown_thread = threading.Thread(target=shutdown_countdown_func).start() 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(ser1, "RFRD1:",)).start() # reader 1 thread
-r2 = threading.Thread(target=serial_read, args=(ser2, "RFRD2:",)).start() # reader 2 thread
-vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
+r1 = threading.Thread(target=serial_read, args=(rfid1_In, "RFRD1:",)).start() # reader 1 thread
+r2 = threading.Thread(target=serial_read, args=(rfid2_In, "RFRD2:",)).start() # reader 2 thread
+vid = threading.Thread(target=serial_read, args=(vid_In, "VID",)).start() # VID detector thread
 
 '''
 Main Loop - this will run continuously to read from queues and process data
@@ -255,11 +255,11 @@ while True:
     elif vid_input[0] == "1":
         vid1Msg = vid_input
         print("VID Lane 1 Read: " + repr(vid1Msg))
-        ser4.write(vid1Msg.encode('utf-8'))  # send to serial port 4
+        plc_Out.write(vid1Msg.encode('utf-8'))  # send to serial port 4
     elif vid_input[0] == "2":
         vid2Msg = vid_input
         print("VID Lane 2 Read: " + repr(vid2Msg))
-        ser4.write(vid2Msg.encode('utf-8'))  # send to serial port 4
+        plc_Out.write(vid2Msg.encode('utf-8'))  # send to serial port 4
 
     
     # true or false if results match for lane 1
@@ -268,21 +268,21 @@ while True:
     
     # RFID data only recorded if certain read conditions are met
 
-    # lane 1 comparison - ser4 should be writing the VID anyway
+    # lane 1 comparison - plc_Out should be writing the VID anyway
     if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid1Msg == rfid1FuelScanMsg: added after trial
-        # in future, this will be written to plc, for now just record
+        # in future, this will be written to plc_Out, for now just record
         log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
     # record regardless of RFID, but only if VID is in scope
     elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg)):
         log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
-        #ser4.write(vid1Msg.encode('utf-8')) # send to serial port 4
+        #plc_Out.write(vid1Msg.encode('utf-8')) # send to serial port 4
     
     # lane 2 comparison
     if seqNumFuelScanMsgFromRFID2 > readCount2: #and vid2Msg == rfid2FuelScanMsg:
         log_result(now, '2', vid2Msg, rfid2FuelScanMsg, rfid2Reader.get_tag(), vid2MatchesRfid2)
     elif vid2Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid2Msg)):
         log_result(now, '2', vid2Msg, rfid2FuelScanMsg, rfid2Reader.get_tag(), vid2MatchesRfid2)
-        #ser4.write(vid2Msg.encode('utf-8')) # send to serial port 4
+        #plc_Out.write(vid2Msg.encode('utf-8')) # send to serial port 4
     
     # this doesnt allow both lanes to handle at the same time effectively 
 

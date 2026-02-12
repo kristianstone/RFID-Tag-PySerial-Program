@@ -28,10 +28,10 @@ rfid1Queue = queue.Queue() # queue for reader 1
 rfid2Queue = queue.Queue() # queue for reader 2
 
 # reader 1
-ser1 = serial.Serial('COM9', baudrate=9600) # change COM depending on device
+rfid1_In = serial.Serial('COM9', baudrate=9600) # change COM depending on device
 
 # reader 2
-ser2 = serial.Serial('COM8', baudrate=9600)
+rfid2_In = serial.Serial('COM8', baudrate=9600)
 
 # create serial read lines
 def serial_read(s, readerName):
@@ -43,8 +43,8 @@ def serial_read(s, readerName):
             rfid2Queue.put(readerName + sline.decode('utf-8'))
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(ser1, "RFRD1:",)).start() # reader 1 thread
-r2 = threading.Thread(target=serial_read, args=(ser2, "RFRD2:",)).start() # reader 2 thread
+r1 = threading.Thread(target=serial_read, args=(rfid1_In, "RFRD1:",)).start() # reader 1 thread
+r2 = threading.Thread(target=serial_read, args=(rfid2_In, "RFRD2:",)).start() # reader 2 thread
 
 # webcam init
 

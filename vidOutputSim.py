@@ -9,7 +9,7 @@ Serial Port Allocations
 
 '''
 # VID detector input - port 3 - /dev/ttyUSB2 on Linux or COM15 on Windows
-ser3 = serial.Serial('COM18', baudrate=9600)
+vid_In = serial.Serial('COM18', baudrate=9600)
 line = "1-BBT4321,12344321" + '\r\n' # CR and LF as per VID 800
 line2 = "2-BBT2809,00000000" + '\r\n'
 line4 = "1-BBT1234,0000000"
@@ -20,25 +20,25 @@ while True:
     #for i in range(9):
         #lineSend = line4 + str(i) + '\r\n'  # Simulate VID data for lane 1
         #lineSend = prefix + "290" + str(i) + ",00000000\r\n"  # Simulate VID data for lane 1    
-        #ser3.write(lineSend.encode('utf-8'))
+        #vid_In.write(lineSend.encode('utf-8'))
         #time.sleep(1)
-    ser3.write(line.encode('utf-8'))
-    ser3.write(line2.encode('utf-8'))  
+    vid_In.write(line.encode('utf-8'))
+    vid_In.write(line2.encode('utf-8'))  
     time.sleep(1)
-    ser3.write(line.encode('utf-8'))  
+    vid_In.write(line.encode('utf-8'))  
     time.sleep(1) 
-    ser3.write(line.encode('utf-8'))
-    ser3.write(line2.encode('utf-8'))    
+    vid_In.write(line.encode('utf-8'))
+    vid_In.write(line2.encode('utf-8'))    
     time.sleep(1)
-    ser3.write(line.encode('utf-8'))  
+    vid_In.write(line.encode('utf-8'))  
     time.sleep(2) 
-    ser3.write(line5.encode('utf-8'))
+    vid_In.write(line5.encode('utf-8'))
     time.sleep(1)
-    ser3.write(line5.encode('utf-8'))
+    vid_In.write(line5.encode('utf-8'))
     time.sleep(1)
-    ser3.write(line5.encode('utf-8'))
+    vid_In.write(line5.encode('utf-8'))
     time.sleep(1)
-    ser3.write(line5.encode('utf-8'))
+    vid_In.write(line5.encode('utf-8'))
     time.sleep(1)
-    ser3.write(line5.encode('utf-8'))
+    vid_In.write(line5.encode('utf-8'))
     time.sleep(1)
