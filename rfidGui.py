@@ -150,8 +150,8 @@ def update_lanes(n_intervals):
         
     return vid1Val, color, vid2Val, color2, rfid1Val, rfidCol1, \
         rfid2Val, rfidCol2, indicator1, label1, indicator2, label2, \
-        f"Lane 1 VID: {vid1}", f"Lane 1 RFID: {rfid1}", \
-        f"Lane 2 VID: {vid2}", f"Lane 2 RFID: {rfid2}"
+        f"Lane 1 VIDRD: {vid1}", f"Lane 1 RFID: {rfid1}", \
+        f"Lane 2 VIDRD: {vid2}", f"Lane 2 RFID: {rfid2}"
 
 if __name__ == '__main__':
     app.run(debug=True)

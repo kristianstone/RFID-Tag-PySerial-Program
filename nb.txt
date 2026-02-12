@@ -1,0 +1,119 @@
+Toowong Pi:
+ TailScale IP: 100.97.23.89
+ local IP: 192.168.1.83
+ user: pi
+ password: a95vw1
+
+Dev LapTop 
+ TailScale IP: 100.83.58.53
+ local IP: 192.168.1.27
+ user: FMS2
+ password: ToowongFMS
+
+https://login.tailscale.com/admin/machines
+TailScale Console Admin: blairwa.qld@gmail.com
+TailScale Passwd:   cooperate
+
+RealNVC Console Admin: blairwa.qld@gmail.com
+RealNVC Passwd: cooporate
+
+NightHawk Console ID: 
+NightHawk Passwd: ToowongFMS
+
+
+After upgrade to Trixie
+=======================
+
+To restore RealNVC
+------------------
+
+
+Move old virtual environment out of the way
+-------------------------------------------
+mv ~/Documents/rfidenv ~/Documents/rfidenv-bookworm
+
+Create new virtual environment
+------------------------------
+python3 -m venv /home/pi/rfid/rfidenv
+
+cd /home/pi/rfid
+
+Install external modules
+------------------------
+/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 pyserial
+/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 revpimodio2
+/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash
+/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash_daq
+
+Activate Virtual Environment
+----------------------------
+cd ~/rfid
+source /home/pi/Documents/rfidenv/bin/activate
+
+Run Main app
+------------
+python3 rfidMain.py
+
+Run Gui App
+python3 rfidGui.py
+
+
+Make SystemD restart Reader App
+===============================
+cd /home/pi/rfid
+source /home/pi/rfid/rfidenv/bin/activate
+pip install -r /home/pi/rfid/requirements.txt
+deactivate
+
+
+sudo nano /lib/systemd/system/rfid-fuellane-id.service
+
+[Unit]
+Description=FMS RFID for Fuel Lane Id
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/rfid
+# full and absolute path allows script to be run as a service
+ExecStart=/home/pi/rfid/rfidenv/bin/python3 -u /home/pi/rfid/rfidMain.py
+User=pi
+# Optionally, add Restart options to make the service automatically restart if it crashes
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+
+Set Permissions on the Service files
+------------------------------------
+sudo chmod 644 /lib/systemd/system/rfid-fuellane-id.service
+sudo chmod 644 /lib/systemd/system/rfid-fuellane-gui.service
+
+
+Reload the Service if modified
+------------------------------
+sudo systemctl daemon-reload
+
+Enable Service
+--------------
+sudo systemctl enable rfid-fuellane-id.service
+
+Start service
+-------------
+sudo systemctl start rfid-fuellane-id.service
+
+ReStart Service
+---------------
+sudo systemctl restart rfid-fuellane-id.service
+
+view Status of Service
+--------------
+sudo systemctl status rfid-fuellane-id.service
+
+Disable Service
+--------------
+sudo systemctl disable rfid-fuellane-id.service
+
+Follow the journal the specified unit (Service)
+journalctl -f -u rfid-fuellane-id.service

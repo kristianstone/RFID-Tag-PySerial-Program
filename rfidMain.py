@@ -1,3 +1,5 @@
+import argparse
+
 import serial
 import datetime as dt
 import threading
@@ -69,12 +71,21 @@ rfid2Queue = queue.Queue()                  # queue for reader 2
 
 vidQueue = queue.Queue()                    # queue for VID detector
 
+
+# Collect commandline args 
+
+cmdLineParser = argparse.ArgumentParser()
+cmdLineParser.add_argument("-o", "--Output", help="Show output message")
+cmdLineArgs = cmdLineParser.parse_args()
+
+if cmdLineArgs.Output:
+    print("Output:", cmdLineArgs.Output)
+
+
 '''
 Serial Port Allocations
 '''
-
-
-# reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
+#connect reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
 try:
     ser1 = serial.Serial('/dev/ttyUSB0', baudrate=9600)     #open serial port default 8N1
 except serial.SerialException as e:
@@ -83,7 +94,7 @@ except serial.SerialException as e:
     sys.exit()
 
 
-# reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
+# connect reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
 try:
     ser2 = serial.Serial('/dev/ttyUSB1', baudrate=9600)     #open serial port default 8N1
 except serial.SerialException as e:
@@ -92,7 +103,7 @@ except serial.SerialException as e:
     sys.exit()
 
 
-# VID detector input - port 3 - /dev/ttyUSB2 on Linux
+# connect VID detector input - port 3 - /dev/ttyUSB2 on Linux
 try:
     ser3 = serial.Serial('/dev/ttyUSB2', baudrate=9600)
 except serial.SerialException as e:
@@ -101,7 +112,7 @@ except serial.SerialException as e:
     sys.exit()
 
 
-# output serial port - port 4 - /dev/ttyUSB3 on linux
+# connect output serial port - port 4 - /dev/ttyUSB3 on linux
 try:
     ser4 = serial.Serial('/dev/ttyUSB3', baudrate=9600)
 except serial.SerialException as e:
@@ -154,15 +165,16 @@ def serial_read(s, readerName):
     while 1:
         try:
             sline = s.readline()
-            if readerName == "R1:":                                                                                 # add to reader 1 queue
+            if readerName == "RFRD1:":                                                                                 # add to reader 1 queue
                 rfid1Queue.put(sline.decode('utf-8'))
-            elif readerName == "R2:":                                                                               # add to reader 2 queue
+            elif readerName == "RFRD2:":                                                                               # add to reader 2 queue
                 rfid2Queue.put(sline.decode('utf-8'))                                                               # may consider bringing readerName back
             else:                                                                                                   # add to VID queue
                 vidQueue.put(sline.decode('utf-8'))
         except Exception as e:
-            print(f"[{dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error reading from {readerName}: {e}")
+            print(f"[{dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] Error reading from {readerName}: {e}")
             rpi.io.RevPiOutput.value = 1                                                                            # turn on LED 
+    ## end while 1
 
 
 
@@ -239,9 +251,9 @@ def log_result( when,   tagOrigin,  vidMsg, rfidMsg,    rfidNum,    prevRfidNum,
 
 
 # creating each thread to receive data from readers
-r1  = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
-r2  = threading.Thread(target=serial_read, args=(ser2, "R2:",)).start() # reader 2 thread
-vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
+rfrd1 = threading.Thread(target=serial_read, args=(ser1, "RFRD1:",)).start() # reader 1 thread
+rfrd2 = threading.Thread(target=serial_read, args=(ser2, "RFRD2:",)).start() # reader 2 thread
+vidrd = threading.Thread(target=serial_read, args=(ser3, "VIDRD:",)).start() # VID detector thread
 
 
 
@@ -260,8 +272,6 @@ cursor.execute('''
 
 conn.commit()                                                       # commit the changes to the database
 
-
-
 # initialize a column for each lane
 for lane in [1, 2]:
     cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
@@ -270,9 +280,11 @@ conn.commit()                                                      # commit the 
 
 
 
+
 '''
 Main Loop - this will run continuously to read from queues and process data
 '''
+print("RFID Reader ready to enter Main Loop")
 while True:
     # time of event
     now = dt.datetime.now()
@@ -379,10 +391,9 @@ while True:
     tagId = rfid1Reader.get_tag() 
     lastTagId =  rfid1Reader.get_last_tag()  
 
-    if (rfid1SeqNumFuelScanMsg > RFID_READS_TO_TRUST) :                 #get RFID_READS_TO_TRUST consecutive reads to trust the data
+    if (rfid1SeqNumFuelScanMsg > RFID_READS_TO_TRUST) :                 # get RFID_READS_TO_TRUST consecutive reads to trust the data
         rfidLanes = "R_IN_L1"
-        if(rfid1FuelScanMsg[2:9] == rfid2FuelScanMsg[2:9]):
-            # Flag if the RFID is seen in both lanes
+        if(rfid1FuelScanMsg[2:9] == rfid2FuelScanMsg[2:9]):             # Flag if the RFID is seen in both lanes
             rfidLanes = "R_IN_BOTH"
         # in future, rfid1FuelScanMsg will be written to plc, for now just record
         log_result(now, 'rfid1', vid1Msg, rfid1FuelScanMsg, tagId, lastTagId, rfid1SeqNumFuelScanMsg, rfid1NullPolls, batteryStatus(tagId), vid1MatchesRfid1, rfidLanes)
@@ -405,8 +416,7 @@ while True:
 
     if (rfid2SeqNumFuelScanMsg > RFID_READS_TO_TRUST) :                 #and vid2Msg == rfid2FuelScanMsg:  
         rfidLanes = "R_IN_L2"
-        if(rfid1FuelScanMsg[2:9] == rfid2FuelScanMsg[2:9]) :
-            # Flag if the RFID is seen in both lanes
+        if(rfid1FuelScanMsg[2:9] == rfid2FuelScanMsg[2:9]) :            # Flag if the RFID is seen in both lanes
             rfidLanes = "R_IN_BOTH"        
         log_result(now, 'rfid2', vid2Msg, rfid2FuelScanMsg, tagId, lastTagId, rfid2SeqNumFuelScanMsg, rfid2NullPolls, batteryStatus(tagId), vid2MatchesRfid2, rfidLanes)
 

@@ -27,9 +27,10 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.status = status # instance attribute 
-        self.tagNumber = tagNumber # instance attribute
-        self.lastTagNumber = tagNumber
+        self.status         = status # instance attribute 
+        self.tagNumber      = tagNumber # instance attribute
+        self.lastTagNumber  = tagNumber
+
 
     # get status - not required but will leave for video testing
     def get_status(self):
@@ -38,11 +39,13 @@ class Reader:
         """
         return self.status
 
+
     def find_first_unprintable(self, s):
         for i, char in enumerate(s):
             if not char.isprintable():
-                return i  # Return the index immediately upon finding the first unprintable char
-        return None # Return None if no unprintable characters are found
+                return i                    # Return the index immediately upon finding the first unprintable char
+        return len(s)                       # Return length of string if no unprintable characters are found
+
 
     # get tag
     def get_tag(self):
@@ -55,16 +58,18 @@ class Reader:
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         return self.tagNumber[:index]
 
+
     # get tag
     def get_last_tag(self):
         """
-        Returns the string of theLast  RFID tag/ VID Tag detected
+        Returns the string of the Last  RFID tag/ VID Tag detected
         """
         ## WAB strip off trailing unprintable
         s = self.lastTagNumber
         index = self.find_first_unprintable(s)
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         return self.lastTagNumber[:index]
+
 
     # change status
     def change_status(self, newStatus):
@@ -76,6 +81,7 @@ class Reader:
         """
         self.status = newStatus
 
+
     # change tag
     def update_tag(self, newTag):
         """
@@ -85,7 +91,7 @@ class Reader:
             newTag: New tag string
         """
 
-        if(newTag[0] == 'n' or newTag[0] == 'N') :
+        if(newTag[0] == 'n' or newTag[0] == 'N') :                          # record last valid tag
             self.lastTagNumber = self.tagNumber
         self.tagNumber = newTag
 
@@ -95,7 +101,7 @@ class Reader:
 
     Concerns:
     - misreads from RFID readers i.e. does not consider chars and will break
-    - rfid tags must be either a number or "EMPTY"
+    - rfid tags are:  "EMPTY" "T2_POLLING_" or "T1_POLLING_"
     '''
     def get_fleetNumber(self, csvFile):
         """

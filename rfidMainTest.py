@@ -98,9 +98,9 @@ def serial_read(s, readerName):
     while 1:
         try:
             sline = s.readline()
-            if readerName == "R1:": # add to reader 1 queue
+            if readerName == "RFRD1:": # add to reader 1 queue
                 rfid1Queue.put(sline.decode('utf-8'))
-            elif readerName == "R2:": # add to reader 2 queue
+            elif readerName == "RFRD2:": # add to reader 2 queue
                 rfid2Queue.put(sline.decode('utf-8')) # may consider bringing readerName back
             else: # add to VID queue
                 vidQueue.put(sline.decode('utf-8'))
@@ -141,7 +141,7 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(ser1, "R1:",)).start() # reader 1 thread
+r1 = threading.Thread(target=serial_read, args=(ser1, "RFRD1:",)).start() # reader 1 thread
 
 vid = threading.Thread(target=serial_read, args=(ser3, "VID",)).start() # VID detector thread
 
