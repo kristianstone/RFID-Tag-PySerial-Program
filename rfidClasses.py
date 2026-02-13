@@ -9,9 +9,9 @@ class Reader:
     A class to represent an RFID Reader or VID 800.
 
     Attributes:
-          get_status: 
+          get_status:
           get_tag: A string of the RFID tag/ VID Tag currently being detected
-          change_status: 
+          change_status:
           update_tag: Function to update the tag being detected
           get_fleetNumber: Function to convert RFID tag into a VID 800 format string
 
@@ -27,9 +27,10 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.status         = status # instance attribute 
+        self.status         = status # instance attribute
         self.tagNumber      = tagNumber # instance attribute
         self.lastTagNumber  = tagNumber
+        self.fleetNumber = "Tag Unknown"
 
 
     # get status - not required but will leave for video testing
@@ -77,7 +78,7 @@ class Reader:
         May no longer be required
 
         Args:
-            newStatus: 
+            newStatus:
         """
         self.status = newStatus
 
@@ -96,17 +97,16 @@ class Reader:
         self.tagNumber = newTag
 
 
-    '''
-    This needs polishing.
 
-    Concerns:
-    - misreads from RFID readers i.e. does not consider chars and will break
-    - rfid tags are:  "EMPTY" "T2_POLLING_" or "T1_POLLING_"
-    '''
+    ## WAB ToDo This needs polishing.
+    ## Concerns:
+    ## - misreads from RFID readers i.e. does not consider chars and will break
+    ## - rfid tags are:  "EMPTY" "T2_POLLING_" or "T1_POLLING_"
+
     def get_fleetNumber(self, csvFile):
         """
-        Function to convert the RFID tag string to the fleet number of the bus the tag 
-        is fitted to. 
+        Function to convert the RFID tag string to the fleet number of the bus the tag
+        is fitted to.
 
         Args:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
@@ -114,10 +114,10 @@ class Reader:
         self.fleetNumber = "Tag Unknown" # default not registered
 
         if ((self.tagNumber[0] == 'N') or (self.tagNumber[0] == 'n')) :
-            with open(csvFile, mode = 'r') as file: # read each row of csv file
+            with open(csvFile, mode='r', encoding="utf-8") as file: # read each row of csv file
                 tagNum = self.tagNumber[1:] # remove the prefix 'N' or 'n'
-                for x in csv.reader(file): 
+                for x in csv.reader(file):
                     if str(int(tagNum)) == str(x[1]): # checks if it exists in the list
                         self.fleetNumber = x[0] # update the fleet number
 
-        return self.fleetNumber 
+        return self.fleetNumber

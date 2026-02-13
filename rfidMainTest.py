@@ -21,14 +21,14 @@ from rfidUtilTesting import *
 
 
 # CSV file for fleet list
-csvFleetList = 'fleet_list.csv' 
+csvFleetList = 'fleet_list.csv'
 
 # UPS Variables
 shutdown_countdown = 10  # seconds before shutdown
-#rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO 
+#rpi = revpimodio2.RevPiModIO(autorefresh=True)  # initialize RevPiModIO
 
 # Relay Output Value
-#rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off 
+#rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off
 
 # current RFID and VID values
 vid1Msg = "EMPTY"
@@ -76,7 +76,7 @@ try:
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
-    
+
 
 
 
@@ -121,7 +121,7 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
     write_header = not os.path.exists(resultsFile) or os.stat(resultsFile).st_size == 0
 
     try:
-        with open(resultsFile, 'a', newline='') as csvfile:
+        with open(resultsFile, mode='a', encoding="utf-8", newline='') as csvfile:
             fieldnames = ['timestamp', 'lane', 'vid', 'rfid', 'rfidNum', 'match']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if write_header: # write header only if the file is new or has changed date
@@ -178,9 +178,9 @@ while True:
         rfid1Reader.update_tag("EMPTY")
         rfid1FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag
         rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
-        
+
         if rfid1NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
-            seqNumFuelScanMsgFromRFID1 = 0 
+            seqNumFuelScanMsgFromRFID1 = 0
 
     else:
         rfid1NullPolls = 0 # reset empty counter if queue is not empty
@@ -190,11 +190,11 @@ while True:
         seqNumFuelScanMsgFromRFID1 += 1
         if rfid1FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read
-        
+
         prevFuelScanMsgFromRFID1 = rfid1FuelScanMsg  # update previous RFID for lane 1
         print("RFID Lane 1 Read: " + repr(rfid1FuelScanMsg)) # print the current RFID for testing purposes
 
-    
+
     # VID detector queue
     vidsList = []
     while True:
@@ -233,7 +233,7 @@ while True:
         #print("VID Lane 1 Read: " + repr(vid1Msg))
         #pass
         # serial write
-    
+
     #if vid2Msg != "EMPTY":
         #print("VID Lane 2 Read: " + repr(vid2Msg))
         # serial write
@@ -261,5 +261,5 @@ while True:
         # serial write
     elif vid1Msg != "EMPTY":
         print("Lane 1: " + repr(vid1Msg))
-    
+
     time.sleep(1)  # sleep for a second before next iteration

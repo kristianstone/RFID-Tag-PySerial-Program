@@ -35,7 +35,7 @@ def msg2BusNum(vid_string):
 
 # function to check if VID string is in scope
 def is_vid_in_scope(fleet_number, fleetList):
-    with open(fleetList, mode='r') as file:
+    with open(fleetList, mode='r', encoding="utf-8") as file:
         for row in csv.reader(file):
             if fleet_number == row[0]:
                 return True

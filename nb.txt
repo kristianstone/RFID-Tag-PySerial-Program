@@ -1,73 +1,86 @@
+TailScale is being used to proovide a VPN
+=========================================
+https://login.tailscale.com/admin/machines
+TailScale Console Admin: blairwa.qld@gmail.com
+TailScale Passwd:   cooperate
+
 Toowong Pi:
  TailScale IP: 100.97.23.89
  local IP: 192.168.1.83
  user: pi
  password: a95vw1
 
-Dev LapTop 
+Dev LapTop:
  TailScale IP: 100.83.58.53
  local IP: 192.168.1.27
  user: FMS2
  password: ToowongFMS
 
-https://login.tailscale.com/admin/machines
-TailScale Console Admin: blairwa.qld@gmail.com
-TailScale Passwd:   cooperate
+Taildrop may be good for file movement
+======================================
+https://tailscale.com/docs/features/taildrop
 
+TailScale-ssh may be useful for managing Keys
+=============================================
+https://tailscale.com/tailscale-ssh
+
+
+RealVNC Admin
+=============
 RealNVC Console Admin: blairwa.qld@gmail.com
 RealNVC Passwd: cooporate
 
+Modem Admin
+===========
 NightHawk Console ID: 
 NightHawk Passwd: ToowongFMS
 
 
-After upgrade to Trixie
-=======================
-
-To restore RealNVC
-------------------
-
-
 Move old virtual environment out of the way
 -------------------------------------------
-mv ~/Documents/rfidenv ~/Documents/rfidenv-bookworm
+    mv ~/Documents/rfidenv ~/Documents/rfidenv-bookworm
 
 Create new virtual environment
 ------------------------------
-python3 -m venv /home/pi/rfid/rfidenv
+    python3 -m venv /home/pi/rfid/rfidenv
+    python3 -m venv --system-site-packages /home/pi/rfid/rfidenv
 
-cd /home/pi/rfid
+    cd /home/pi/rfid
 
 Install external modules
 ------------------------
-/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 pyserial
-/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 revpimodio2
-/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash
-/home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash_daq
+    /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 cysystemd
+    /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 pyserial
+    /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 revpimodio2
+    /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash
+    /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 dash_daq
 
 Activate Virtual Environment
 ----------------------------
-cd ~/rfid
-source /home/pi/Documents/rfidenv/bin/activate
+    cd ~/rfid
+    source /home/pi/Documents/rfidenv/bin/activate
 
 Run Main app
 ------------
-python3 rfidMain.py
+    python3 rfidMain.py
 
 Run Gui App
-python3 rfidGui.py
+-----------
+    python3 rfidGui.py
 
-
-Make SystemD restart Reader App
-===============================
 cd /home/pi/rfid
 source /home/pi/rfid/rfidenv/bin/activate
 pip install -r /home/pi/rfid/requirements.txt
 deactivate
 
 
-sudo nano /lib/systemd/system/rfid-fuellane-id.service
+Set up Service to run the RFID App
+==================================
 
+Create and Edit the service File
+--------------------------------
+    sudo nano /lib/systemd/system/rfid-fuellane-id.service
+<<<
 [Unit]
 Description=FMS RFID for Fuel Lane Id
 After=network.target
@@ -84,36 +97,59 @@ RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
+>>>
 
 Set Permissions on the Service files
 ------------------------------------
-sudo chmod 644 /lib/systemd/system/rfid-fuellane-id.service
-sudo chmod 644 /lib/systemd/system/rfid-fuellane-gui.service
-
+    sudo chmod 644 /lib/systemd/system/rfid-fuellane-id.service
+    sudo chmod 644 /lib/systemd/system/rfid-fuellane-gui.service
 
 Reload the Service if modified
 ------------------------------
-sudo systemctl daemon-reload
+    sudo systemctl daemon-reload
 
 Enable Service
 --------------
-sudo systemctl enable rfid-fuellane-id.service
+    sudo systemctl enable rfid-fuellane-id.service
 
 Start service
 -------------
-sudo systemctl start rfid-fuellane-id.service
+    sudo systemctl start rfid-fuellane-id.service
 
 ReStart Service
 ---------------
-sudo systemctl restart rfid-fuellane-id.service
+    sudo systemctl restart rfid-fuellane-id.service
 
 view Status of Service
 --------------
-sudo systemctl status rfid-fuellane-id.service
+    sudo systemctl status rfid-fuellane-id.service
 
 Disable Service
 --------------
-sudo systemctl disable rfid-fuellane-id.service
+    sudo systemctl disable rfid-fuellane-id.service
 
+
+Journal Use and Configuration
+=============================
 Follow the journal the specified unit (Service)
-journalctl -f -u rfid-fuellane-id.service
+-----------------------------------------------
+    journalctl -f -u rfid-fuellane-id.service -n100
+
+Keep only the last 2 days of logs
+----------------------------------
+    sudo journalctl --vacuum-time=2d
+
+Reduce the journal to a specific size (e.g., 100MB):
+----------------------------------------------------
+    sudo journalctl --vacuum-size=100M 
+
+Make Permanent Configuration Changes to Systemd
+===============================================
+    sudo nano /etc/systemd/journald.conf
+
+    SystemMaxUse=100M
+
+Save and exit (Ctrl+O, Enter, Ctrl+X), then restart the service:
+----------------------------------------------------------------
+    sudo systemctl restart systemd-journald 
+

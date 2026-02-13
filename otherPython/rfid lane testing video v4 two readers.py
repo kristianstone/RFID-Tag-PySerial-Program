@@ -9,7 +9,7 @@ from rfidClasses import *
 
 # create text file for logging data
 logFileName = "data log " + str(dt.datetime.now().strftime("%d-%b %H%M%S")) + ".txt" # should be the same for linux
-f = open(logFileName, 'a') # creates the text file
+f = open(logFileName, mode='a', encoding="utf-8") # creates the text file
 
 # serial com RFID stuff
 
@@ -72,7 +72,7 @@ out = cv2.VideoWriter(videoFile + ".mp4", fourcc, 25.0, (frame_width, frame_heig
 # need to create out text file too
 
 while True:
-    # camera stuff 
+    # camera stuff
     ret, frame = cam.read()
 
     # time of event
@@ -83,8 +83,8 @@ while True:
     # could turn this into a for loop too
     # change colour for reader 1
     if rfid1Reader.get_status() == True:
-        line_colour1 = colour_dict["green"] 
-    else: 
+        line_colour1 = colour_dict["green"]
+    else:
         line_colour1 = colour_dict["red"]
 
     # change colour for reader 2
@@ -93,7 +93,7 @@ while True:
     else:
         line_colour2 = colour_dict["red"]
 
-    # rectangle for lane 1        
+    # rectangle for lane 1
     cv2.rectangle(frame, (10,10), (300,470), line_colour1, 10)
     cv2.putText(frame,reader1Text,(100,400),font,1,(0,0,255),2,cv2.LINE_AA)
 
@@ -113,7 +113,7 @@ while True:
     # press 'q' to exist the loop
     if cv2.waitKey(1) == ord('q'):
         break
-    
+
     # serial reading stuff
 
     # check reader communication
@@ -133,8 +133,8 @@ while True:
     else:
         rfid2Reader.update_tag(rfid2Queue.get(True))
         f.write(now.strftime("%H:%M:%S ") + rfid2Reader.get_tag()) # save tag read to data file
-                    
-    # reader 1 checks 
+
+    # reader 1 checks
     if rfid1Reader.get_tag() == "EMPTY" and rfid1NullPolls > 30:
         rfid1Reader.change_status(False)
         reader1Text = "No Read" # update video text
@@ -153,9 +153,9 @@ while True:
         rfid2Reader.change_status(True)
         reader2Text = rfid2Reader.get_tag().rstrip()
         rfid2NullPolls = 0
-    
+
     f.close() # close after writing
-    f = open(logFileName, 'a') # reopen for next iteration
+    f = open(logFileName, mode='a', encoding="utf-8") # reopen for next iteration
 
 # release the capture and writer objects
 cam.release()
