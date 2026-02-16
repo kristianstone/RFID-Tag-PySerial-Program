@@ -16,35 +16,35 @@ f = open(logFileName, mode='a', encoding="utf-8") # creates the text file
 # global variable for state if RFID present or not
 reader1Text = "No Read" # for reader 1
 reader2Text = "No Read" # for reader 2
-rfid1NullPolls = 0 # for reader 1
-rfid2NullPolls = 0 # for reader 2
+rfid_1_NullPolls = 0 # for reader 1
+rfid_2_NullPolls = 0 # for reader 2
 
 # create reader - this should make it easier having two readers
-rfid1Reader = Reader(False, "EMPTY") # initalize first reader
-rfid2Reader = Reader(False, "EMPTY") # second reader
+rfid_1_Reader = Reader(False, "EMPTY") # initalize first reader
+rfid_2_Reader = Reader(False, "EMPTY") # second reader
 
 # queue creation
-rfid1Queue = queue.Queue() # queue for reader 1
-rfid2Queue = queue.Queue() # queue for reader 2
+rfid_1_Queue = queue.Queue() # queue for reader 1
+rfid_2_Queue = queue.Queue() # queue for reader 2
 
 # reader 1
-rfid1_In = serial.Serial('COM9', baudrate=9600) # change COM depending on device
+rfid_1_In = serial.Serial('COM9', baudrate=9600) # change COM depending on device
 
 # reader 2
-rfid2_In = serial.Serial('COM8', baudrate=9600)
+rfid_2_In = serial.Serial('COM8', baudrate=9600)
 
 # create serial read lines
 def serial_read(s, readerName):
     while 1:
         sline = s.readline()
         if readerName == "RFRD1:": # add to reader 1 queue
-            rfid1Queue.put(readerName + sline.decode('utf-8'))
+            rfid_1_Queue.put(readerName + sline.decode('utf-8'))
         else: # add to reader 2 queue
-            rfid2Queue.put(readerName + sline.decode('utf-8'))
+            rfid_2_Queue.put(readerName + sline.decode('utf-8'))
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(rfid1_In, "RFRD1:",)).start() # reader 1 thread
-r2 = threading.Thread(target=serial_read, args=(rfid2_In, "RFRD2:",)).start() # reader 2 thread
+r1 = threading.Thread(target=serial_read, args=(rfid_1_In, "RFRD1:",)).start() # reader 1 thread
+r2 = threading.Thread(target=serial_read, args=(rfid_2_In, "RFRD2:",)).start() # reader 2 thread
 
 # webcam init
 
@@ -82,13 +82,13 @@ while True:
 
     # could turn this into a for loop too
     # change colour for reader 1
-    if rfid1Reader.get_status() == True:
+    if rfid_1_Reader.get_status() == True:
         line_colour1 = colour_dict["green"]
     else:
         line_colour1 = colour_dict["red"]
 
     # change colour for reader 2
-    if rfid2Reader.get_status() == True:
+    if rfid_2_Reader.get_status() == True:
         line_colour2 = colour_dict["green"]
     else:
         line_colour2 = colour_dict["red"]
@@ -119,40 +119,40 @@ while True:
     # check reader communication
 
     # for reader 1
-    if rfid1Queue.empty():
-        rfid1Reader.update_tag("EMPTY")
-        rfid1NullPolls += 1 # increment for each empty print
+    if rfid_1_Queue.empty():
+        rfid_1_Reader.update_tag("EMPTY")
+        rfid_1_NullPolls += 1 # increment for each empty print
     else:
-        rfid1Reader.update_tag(rfid1Queue.get(True))
-        f.write(now.strftime("%H:%M:%S ") + rfid1Reader.get_tag()) # save tag read to data file
+        rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfid_1_Reader.get_tag()) # save tag read to data file
 
     # for reader 2
-    if rfid2Queue.empty():
-        rfid2Reader.update_tag("EMPTY")
-        rfid2NullPolls += 1 # increment for each empty print
+    if rfid_2_Queue.empty():
+        rfid_2_Reader.update_tag("EMPTY")
+        rfid_2_NullPolls += 1 # increment for each empty print
     else:
-        rfid2Reader.update_tag(rfid2Queue.get(True))
-        f.write(now.strftime("%H:%M:%S ") + rfid2Reader.get_tag()) # save tag read to data file
+        rfid_2_Reader.update_tag(rfid_2_Queue.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfid_2_Reader.get_tag()) # save tag read to data file
 
     # reader 1 checks
-    if rfid1Reader.get_tag() == "EMPTY" and rfid1NullPolls > 30:
-        rfid1Reader.change_status(False)
+    if rfid_1_Reader.get_tag() == "EMPTY" and rfid_1_NullPolls > 30:
+        rfid_1_Reader.change_status(False)
         reader1Text = "No Read" # update video text
 
-    if rfid1Reader.get_tag()[0] == "R":
-        rfid1Reader.change_status(True)
-        reader1Text = rfid1Reader.get_tag().rstrip()
-        rfid1NullPolls = 0
+    if rfid_1_Reader.get_tag()[0] == "R":
+        rfid_1_Reader.change_status(True)
+        reader1Text = rfid_1_Reader.get_tag().rstrip()
+        rfid_1_NullPolls = 0
 
     # reader 2 checks
-    if rfid2Reader.get_tag() == "EMPTY" and rfid2NullPolls > 30:
-        rfid2Reader.change_status(False)
+    if rfid_2_Reader.get_tag() == "EMPTY" and rfid_2_NullPolls > 30:
+        rfid_2_Reader.change_status(False)
         reader2Text = "No Read" # update video text
 
-    if rfid2Reader.get_tag()[0] == "R":
-        rfid2Reader.change_status(True)
-        reader2Text = rfid2Reader.get_tag().rstrip()
-        rfid2NullPolls = 0
+    if rfid_2_Reader.get_tag()[0] == "R":
+        rfid_2_Reader.change_status(True)
+        reader2Text = rfid_2_Reader.get_tag().rstrip()
+        rfid_2_NullPolls = 0
 
     f.close() # close after writing
     f = open(logFileName, mode='a', encoding="utf-8") # reopen for next iteration

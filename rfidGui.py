@@ -26,8 +26,8 @@ app.layout = html.Div([
     html.H1("TBG Fuelbay Bus Identification System",
             style={'textAlign': 'center',
                    'fontFamily': 'Arial, sans-serif'} ),
-    
-    # Lane 1 Divider 
+
+    # Lane 1 Divider
     html.Div([
         html.H2("Lane 1 Data",
             style={'textAlign': 'center',
@@ -67,7 +67,7 @@ app.layout = html.Div([
             'padding': '10px',
             'margin': '5px'}),
 
-    # Lane 2 Divider 
+    # Lane 2 Divider
     html.Div([
         html.H2("Lane 2 Data",
             style={'textAlign': 'center',
@@ -136,22 +136,22 @@ app.layout = html.Div([
 )
 
 def update_lanes(n_intervals):
-    vid1, rfid1 = read_lane_data(cursor, 1)
-    vid2, rfid2 = read_lane_data(cursor, 2)
-    
-    vid1Val, color = update_lane_led(vid1)
-    vid2Val, color2 = update_lane_led(vid2)
+    vid_1, rfid_1 = read_lane_data(cursor, 1)
+    vid_2, rfid_2 = read_lane_data(cursor, 2)
 
-    rfid1Val, rfidCol1 = update_lane_led(rfid1)
-    rfid2Val, rfidCol2 = update_lane_led(rfid2)
+    vid_1_Val, color = update_lane_led(vid_1)
+    vid_2_Val, color2 = update_lane_led(vid_2)
 
-    indicator1, label1 = update_lane_indicator(vid1Val, rfid1Val)
-    indicator2, label2 = update_lane_indicator(vid2Val, rfid2Val)
-        
-    return vid1Val, color, vid2Val, color2, rfid1Val, rfidCol1, \
-        rfid2Val, rfidCol2, indicator1, label1, indicator2, label2, \
-        f"Lane 1 VIDRD: {vid1}", f"Lane 1 RFID: {rfid1}", \
-        f"Lane 2 VIDRD: {vid2}", f"Lane 2 RFID: {rfid2}"
+    rfid_1_Val, rfidCol1 = update_lane_led(rfid_1)
+    rfid_2_Val, rfidCol2 = update_lane_led(rfid_2)
+
+    indicator1, label1 = update_lane_indicator(vid_1_Val, rfid_1_Val)
+    indicator2, label2 = update_lane_indicator(vid_2_Val, rfid_2_Val)
+
+    return vid_1_Val, color, vid_2_Val, color2, rfid_1_Val, rfidCol1, \
+        rfid_2_Val, rfidCol2, indicator1, label1, indicator2, label2, \
+        f"Lane 1 VIDRD: {vid_1}", f"Lane 1 RFID: {rfid_1}", \
+        f"Lane 2 VIDRD: {vid_2}", f"Lane 2 RFID: {rfid_2}"
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -31,10 +31,10 @@ shutdown_countdown = 10  # seconds before shutdown
 #rpi.io.RevPiOutput.value = 0 # default relay open/ LED Off
 
 # current RFID and VID values
-vid1Msg = "EMPTY"
-vid2Msg = "EMPTY"
-rfid1FuelScanMsg = "EMPTY"
-rfid2FuelScanMsg = "EMPTY"
+vid_1_Msg = "EMPTY"
+vid_2_Msg = "EMPTY"
+rfid_1_FuelScanMsg = "EMPTY"
+rfid_2_FuelScanMsg = "EMPTY"
 
 # previous RFID and VID values for counting
 prevFuelScanMsgFromRFID1 = "INIT" # previous RFID for lane 1
@@ -44,8 +44,8 @@ prevFuelScanMsgFromRFID2 = "INIT" # previous RFID for lane 2
 seqNumFuelScanMsgFromRFID1 = 0 # counter for RFID reader 1
 seqNumFuelScanMsgFromRFID2 = 0 # counter for RFID reader 2
 
-rfid1NullPolls = 0 # counter for empty reads on RFID reader 1
-rfid2NullPolls = 0 # counter for empty reads on RFID reader 2
+rfid_1_NullPolls = 0 # counter for empty reads on RFID reader 1
+rfid_2_NullPolls = 0 # counter for empty reads on RFID reader 2
 
 NO_READ_LIMIT = 3 # number of empty reads before resetting the counter
 
@@ -54,16 +54,16 @@ readCount1 = 5 # required read count for RFID reader 1
 readCount2 = 5 # required read count for RFID reader 2
 
 # create reader - this should make it easier having two readers
-rfid1Reader = Reader(False, "EMPTY") # initalize first reader
-rfid2Reader = Reader(False, "EMPTY") # second reader
+rfid_1_Reader = Reader(False, "EMPTY") # initalize first reader
+rfid_2_Reader = Reader(False, "EMPTY") # second reader
 
 # may eventually use this properly, but for now just using global variables
-vidLane1 = Reader(False, "EMPTY") # VID detector lane 1
-vidLane2 = Reader(False, "EMPTY") # VID detector lane 2
+vid_Reader = Reader(False, "EMPTY") # VID detector lane 1
+
 
 # queue creation
-rfid1Queue = queue.Queue() # queue for reader 1
-rfid2Queue = queue.Queue() # queue for reader 2
+rfid_1_Queue = queue.Queue() # queue for reader 1
+rfid_2_Queue = queue.Queue() # queue for reader 2
 vidQueue = queue.Queue() # queue for VID detector
 
 '''
@@ -72,7 +72,7 @@ Serial Port Allocations
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
 
 try:
-    rfid1_In = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
+    rfid_1_In = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -99,9 +99,9 @@ def serial_read(s, readerName):
         try:
             sline = s.readline()
             if readerName == "RFRD1:": # add to reader 1 queue
-                rfid1Queue.put(sline.decode('utf-8'))
+                rfid_1_Queue.put(sline.decode('utf-8'))
             elif readerName == "RFRD2:": # add to reader 2 queue
-                rfid2Queue.put(sline.decode('utf-8')) # may consider bringing readerName back
+                rfid_2_Queue.put(sline.decode('utf-8')) # may consider bringing readerName back
             else: # add to VID queue
                 vidQueue.put(sline.decode('utf-8'))
         except Exception as e:
@@ -141,7 +141,7 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(rfid1_In, "RFRD1:",)).start() # reader 1 thread
+r1 = threading.Thread(target=serial_read, args=(rfid_1_In, "RFRD1:",)).start() # reader 1 thread
 
 vid = threading.Thread(target=serial_read, args=(vid_In, "VID",)).start() # VID detector thread
 
@@ -174,25 +174,25 @@ while True:
     now = dt.datetime.now()  # get current time for logging
 
     # lane 1 RFID reader queue
-    if rfid1Queue.empty():
-        rfid1Reader.update_tag("EMPTY")
-        rfid1FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag
-        rfid1NullPolls += 1 # increment the empty counter for RFID reader 1
+    if rfid_1_Queue.empty():
+        rfid_1_Reader.update_tag("EMPTY")
+        rfid_1_FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag
+        rfid_1_NullPolls += 1 # increment the empty counter for RFID reader 1
 
-        if rfid1NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
+        if rfid_1_NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
             seqNumFuelScanMsgFromRFID1 = 0
 
     else:
-        rfid1NullPolls = 0 # reset empty counter if queue is not empty
-        rfid1Reader.update_tag(rfid1Queue.get(True))
+        rfid_1_NullPolls = 0 # reset empty counter if queue is not empty
+        rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid1FuelScanMsg = "1-BBT" + rfid1Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
+        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
         seqNumFuelScanMsgFromRFID1 += 1
-        if rfid1FuelScanMsg != prevFuelScanMsgFromRFID1:
+        if rfid_1_FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read
 
-        prevFuelScanMsgFromRFID1 = rfid1FuelScanMsg  # update previous RFID for lane 1
-        print("RFID Lane 1 Read: " + repr(rfid1FuelScanMsg)) # print the current RFID for testing purposes
+        prevFuelScanMsgFromRFID1 = rfid_1_FuelScanMsg  # update previous RFID for lane 1
+        print("RFID Lane 1 Read: " + repr(rfid_1_FuelScanMsg)) # print the current RFID for testing purposes
 
 
     # VID detector queue
@@ -204,62 +204,62 @@ while True:
         except queue.Empty:
             break
 
-    vid1Msg = "EMPTY"  # default value for VID lane 1 this is pretty dumb looking at it now
-    vid2Msg = "EMPTY"  # default value for VID lane 2
+    vid_1_Msg = "EMPTY"  # default value for VID lane 1 this is pretty dumb looking at it now
+    vid_2_Msg = "EMPTY"  # default value for VID lane 2
 
     for vidIn in vidsList:
         if vidIn.startswith("1"): # VID for lane 1
-            vid1Msg = vidIn
+            vid_1_Msg = vidIn
         elif vidIn.startswith("2"): # VID for lane 2
-            vid2Msg = vidIn
+            vid_2_Msg = vidIn
 
     # testing RFID stuff
-    #rfid1FuelScanMsg = "1-BBT9999,12344321"
-    #rfid2FuelScanMsg = "2-BBT2809,00000000"  # testing RFID for lane 2
+    #rfid_1_FuelScanMsg = "1-BBT9999,12344321"
+    #rfid_2_FuelScanMsg = "2-BBT2809,00000000"  # testing RFID for lane 2
 
     # testing database update
-    update_lane_data(cursor, 1, vid1Msg, rfid1FuelScanMsg)  # update lane 1 data in the database
-    update_lane_data(cursor, 2, vid2Msg, rfid2FuelScanMsg)  # update lane 2 data in the database
+    update_lane_data(cursor, 1, vid_1_Msg, rfid_1_FuelScanMsg)  # update lane 1 data in the database
+    update_lane_data(cursor, 2, vid_2_Msg, rfid_2_FuelScanMsg)  # update lane 2 data in the database
     conn.commit()  # commit the changes to the database
 
     #print("lane 1: " + str(read_lane_data(cursor, 1)))  # print lane 1 data for testing
     #print("lane 2: " + str(read_lane_data(cursor, 2)))  # print lane 2 data for testing
 
     # true or false if results match for lane 1
-    vid1MatchesRfid1 = msg2BusNum(vid1Msg) == msg2BusNum(rfid1FuelScanMsg) and vid1Msg != "EMPTY" and rfid1FuelScanMsg != "EMPTY"
-    vid2MatchesRfid2 = msg2BusNum(vid2Msg) == msg2BusNum(rfid2FuelScanMsg) and vid2Msg != "EMPTY" and rfid2FuelScanMsg != "EMPTY"
+    vid_1_MatchesRfid1 = msg2BusNum(vid_1_Msg) == msg2BusNum(rfid_1_FuelScanMsg) and vid_1_Msg != "EMPTY" and rfid_1_FuelScanMsg != "EMPTY"
+    vid_2_MatchesRfid2 = msg2BusNum(vid_2_Msg) == msg2BusNum(rfid_2_FuelScanMsg) and vid_2_Msg != "EMPTY" and rfid_2_FuelScanMsg != "EMPTY"
 
-    #if vid1Msg != "EMPTY":
-        #print("VID Lane 1 Read: " + repr(vid1Msg))
+    #if vid_1_Msg != "EMPTY":
+        #print("VID Lane 1 Read: " + repr(vid_1_Msg))
         #pass
         # serial write
 
-    #if vid2Msg != "EMPTY":
-        #print("VID Lane 2 Read: " + repr(vid2Msg))
+    #if vid_2_Msg != "EMPTY":
+        #print("VID Lane 2 Read: " + repr(vid_2_Msg))
         # serial write
 
 
     # RFID data only recorded if certain read conditions are met
 
     # lane 1 comparison - plc_Out should be writing the VID anyway
-    #if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid1Msg == rfid1FuelScanMsg: added after trial
+    #if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid_1_Msg == rfid_1_FuelScanMsg: added after trial
         # in future, this will be written to plc_Out, for now just record
-        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
+        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.get_tag(), vid_1_MatchesRfid1)
     # record regardless of RFID, but only if VID is in scope
-    #elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList):
-        #log_result(now, '1', vid1Msg, rfid1FuelScanMsg, rfid1Reader.get_tag(), vid1MatchesRfid1)
-        #plc_Out.write(vid1Msg.encode('utf-8')) # send to serial port 4
+    #elif vid_1_Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid_1_Msg), csvFleetList):
+        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.get_tag(), vid_1_MatchesRfid1)
+        #plc_Out.write(vid_1_Msg.encode('utf-8')) # send to serial port 4
 
     if seqNumFuelScanMsgFromRFID1 > readCount1:
-        print("Lane 1 RFID Read Confirmed: " + repr(rfid1FuelScanMsg))
+        print("Lane 1 RFID Read Confirmed: " + repr(rfid_1_FuelScanMsg))
         # log etc
         # serial write
-    elif vid1Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid1Msg), csvFleetList) and rfid1FuelScanMsg == "EMPTY":
-        print("Lane 1 VID Read Confirmed without RFID: " + repr(vid1Msg))
+    elif vid_1_Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid_1_Msg), csvFleetList) and rfid_1_FuelScanMsg == "EMPTY":
+        print("Lane 1 VID Read Confirmed without RFID: " + repr(vid_1_Msg))
         # raise a flag "Issue Bus #### RFID Failure"
         # log
         # serial write
-    elif vid1Msg != "EMPTY":
-        print("Lane 1: " + repr(vid1Msg))
+    elif vid_1_Msg != "EMPTY":
+        print("Lane 1: " + repr(vid_1_Msg))
 
     time.sleep(1)  # sleep for a second before next iteration
