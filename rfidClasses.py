@@ -2,7 +2,7 @@
 A module that declares classes for the RFID Fuelbay Project.
 """
 
-#import csv
+import csv
 from rfidConstants import  *
 
 class Reader:
