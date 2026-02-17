@@ -2,7 +2,8 @@
 A module that declares classes for the RFID Fuelbay Project.
 """
 
-import csv
+#import csv
+from rfidConstants import  *
 
 class Reader:
     """
@@ -27,10 +28,12 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.status         = status # instance attribute
-        self.tagNumber      = tagNumber # instance attribute
+        self.status         = status        # instance attribute
+        self.tagNumber      = tagNumber     # instance attribute
         self.lastTagNumber  = tagNumber
-        self.fleetNumber = "Tag Unknown"
+        self.qStatus        = Q_EMPTY
+        self.tagValid       = False
+        self.fleetNumber    = "TagUnknown"
 
 
     # get status - not required but will leave for video testing
@@ -84,7 +87,7 @@ class Reader:
 
 
     # change tag
-    def update_tag(self, newTag):
+    def update_tag(self, newTag, qStatus) -> bool :
         """
         Function to update the tag being read by the RFID Reader/ VID 800
 
@@ -94,7 +97,12 @@ class Reader:
 
         if(newTag[0] == 'n' or newTag[0] == 'N') :                          # record last valid tag
             self.lastTagNumber = self.tagNumber
+            self.tagValid = True
+        else:
+            self.tagValid = False
+
         self.tagNumber = newTag
+        return self.tagValid
 
 
 
