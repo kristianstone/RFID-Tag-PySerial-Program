@@ -186,7 +186,7 @@ while True:
         rfid_1_NullPolls = 0 # reset empty counter if queue is not empty
         rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'
+        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n'
         seqNumFuelScanMsgFromRFID1 += 1
         if rfid_1_FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read

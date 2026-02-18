@@ -14,7 +14,7 @@ class Reader:
           get_tag: A string of the RFID tag/ VID Tag currently being detected
           change_status:
           update_tag: Function to update the tag being detected
-          get_fleetNumber: Function to convert RFID tag into a VID 800 format string
+          get_BusNumFromTag: Function to convert RFID tag into a VID 800 format string
 
     """
 
@@ -111,7 +111,7 @@ class Reader:
     ## - misreads from RFID readers i.e. does not consider chars and will break
     ## - rfid tags are:  "EMPTY" "T2_POLLING_" or "T1_POLLING_"
 
-    def get_fleetNumber(self, csvFile):
+    def get_BusNumFromTag(self, csvFile):
         """
         Function to convert the RFID tag string to the fleet number of the bus the tag
         is fitted to.

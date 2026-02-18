@@ -43,6 +43,34 @@ def get_git_short_hash():
     except FileNotFoundError:
         return "Git executable not found in PATH"
 
+
+def get_latest_git_tag():
+    # Use 'git describe --tags --abbrev=0' to get the latest tag name
+    try:
+        result = subprocess.run(
+            ['git', 'describe', '--tags', '--abbrev=0'],
+            capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return None # No tags found
+
+def get_git_committer_info():
+    # Use 'git show' with a specific format to get name and email
+    try:
+        # --format='%cn <%ce>' gets committer name and email
+        # -s suppresses the diff output
+        result = subprocess.check_output(
+            ['git', 'show', '-s', '--format=%cn <%ce>', 'HEAD'],
+            stderr=subprocess.STDOUT,
+            text=True
+        ).strip()
+        return result
+    except subprocess.CalledProcessError as e:
+        return f"Error running git command: {e.output}"
+    except FileNotFoundError:
+        return "Error: 'git' command not found. Is Git installed and in the system PATH?"
+
 if __name__ == '__main__':
 
     ##############################
@@ -60,9 +88,9 @@ if __name__ == '__main__':
     # optionally set the logging level
     log2journal.setLevel(logging.DEBUG)
 
-    print(f"Short Commit ID: {get_git_short_hash()}")
-
-
+    print(f"Git Short Commit ID: {get_git_short_hash()}")
+    print(f"Git Latest Tag: {get_latest_git_tag()}")
+    print(f"Git Committer: {get_git_committer_info()}")
 
     #########################
     # CSV file for fleet list
@@ -117,14 +145,14 @@ if __name__ == '__main__':
 
     rfid_1_FuelScanMsg:         str = MSG_EMPTY
     rfid_1_PrevFuelScanMsg:     str = MSG_INIT                        # initial RFID for lane 1
-    rfid_1_SequentialReads:     int = 0                             # counter for RFID reader 1
+    rfid_1_SequentialReads:     int = 1                             # counter for RFID reader 1
     rfid_1_NullPolls:           int = 0                             # counter for empty reads on RFID reader 1
     rfid_1_Queue:               queue.Queue[str]  = queue.Queue()   # queue for reader 1
     rfid_1_Reader:              Reader = Reader(False, MSG_EMPTY)     # initalize first reader
 
     rfid_2_FuelScanMsg:         str = MSG_EMPTY
     rfid_2_PrevFuelScanMsg:     str = MSG_INIT                        # initial previous RFID for lane 2
-    rfid_2_SequentialReads:     int = 0                             # counter for RFID reader 2
+    rfid_2_SequentialReads:     int = 1                             # counter for RFID reader 2
     rfid_2_NullPolls:           int = 0                             # counter for empty reads on RFID reader 2
     rfid_2_Queue:               queue.Queue[str]  = queue.Queue()   # queue for reader 2
     rfid_2_Reader:              Reader = Reader(False, MSG_EMPTY)     # second reader
@@ -192,10 +220,6 @@ if __name__ == '__main__':
         log2journal.error("Error opening serial port for: output: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
         sys.exit()
-
-    resultsFile = get_results_filename()                                                                    # initialize results file name
-    current_log_date = dt.datetime.now().date()                                                             # initialize current log date
-
 
 
     #######################
@@ -283,7 +307,7 @@ if __name__ == '__main__':
     # Diagnostic Logging  to CSV
     ############################
     # considering another column which has flags that describe the mismatch issue
-    def log_result( when, tagOrigin, vidMsg, rfidMsg, rfidNum, prevRfidNum, seqNum, nullPolls, batteryStatus, match, rfidLanes):
+    def log2CSV( when, tagOrigin, vidMsg, rfidMsg, rfidNum, prevRfidNum, seqNum, nullPolls, batteryStatus, match, rfidLanes):
         """
         Stores the results of the program into a CSV file for data analysis.
         Data is placed into columns:
@@ -305,29 +329,26 @@ if __name__ == '__main__':
         Raises:
             Exception: An error occured writing to the CSV file.
         """
-        global resultsFile
-        global current_log_date
+
+        timeStamp = when.strftime('%Y-%m-%d, %H:%M:%S.%f')[:-3]
+
+        CSV_LOG_FILE = "logs/log.csv"   # logrotate is used to rotate the log file
         global rpiRelay
 
         if (False is LOG_TO_CSV):
+            #log2journal.error("LOG_TO_CSV=%s",LOG_TO_CSV)
             return
 
-        # check if the date has changed
-        if when.date() != current_log_date:
-            resultsFile = get_results_filename()                                                            # create next results file name
-            current_log_date = when.date()                                                                  # update current log date
-
-        timeStamp = when.strftime('%Y-%m-%d, %H:%M:%S.%f')[:-3]
         msgV = repr(vidMsg)
         msgR = repr(rfidMsg)
 
-        log2journal.error("CSV %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", timeStamp, tagOrigin, msgV, msgR, rfidNum, prevRfidNum, seqNum, nullPolls, batteryStatus, match, rfidLanes)
+        log2journal.info("CSV %s,%s,%s,%s,%s,%s,%s,%s,%s,%s", tagOrigin, msgV, msgR, rfidNum, prevRfidNum, seqNum, nullPolls, batteryStatus, match, rfidLanes)
 
         # create headers for csv file
-        write_header = not os.path.exists(resultsFile) or os.stat(resultsFile).st_size == 0
+        write_header = (not (os.path.exists(CSV_LOG_FILE)) or (os.stat(CSV_LOG_FILE).st_size == 0))
 
         try:
-            with open(resultsFile, mode='a', encoding="utf-8", newline='') as csvfile:
+            with open(CSV_LOG_FILE, mode='a', encoding="utf-8", newline='') as csvfile:
                 fieldnames = ['timestamp', 'tagOrigin', 'vidMsg', 'rfidMsg', 'rfidNum', 'prevRfidNum','seqNum', 'nullPolls', 'batteryStatus', 'match', 'rfidLanes']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 if write_header:                                                                            # write header only if the file is new or has changed date
@@ -346,7 +367,7 @@ if __name__ == '__main__':
                     'rfidLanes'         : rfidLanes
                 })
         except Exception as e:
-            log2journal.error("Error writing to results file {resultsFile}: {%s}",e)
+            log2journal.error("Error writing CSV line to file {CSV_LOG_FILE}: {%s}",e)
             rpiRelay = LED_ON                                # turn on LED
 
 
@@ -421,20 +442,20 @@ if __name__ == '__main__':
             else :
                 rfid_1_NullPolls += 1
                 rfid_1_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_1_FuelScanMsg = MSG_POLLING + str(rfid_1_NullPolls)
+                rfid_1_FuelScanMsg = "L1-" + MSG_POLLING + '-' + str(rfid_1_NullPolls)
                 log2journal.info("<%s>", repr(rfid_1_FuelScanMsg))                                              # increment the empty counter for RFID reader 1
         else :
             rfid_1_NullPolls = 0                                                                                # reset empty counter if queue is not empty
             rfid_1_Reader.update_tag(rfid_1_Queue.get(True), Q_READY)
             # conversion to the proper string, look up table handled inside of reader class
-            rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'   # VID 800 outputs \r\n in the msg
+            rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n'   # VID 800 outputs \r\n in the msg
             rfid_1_SequentialReads += 1
 
             if rfid_1_FuelScanMsg != rfid_1_PrevFuelScanMsg:
                 rfid_1_SequentialReads = 1                                                                      # reset the counter to 1 if different tag is read
 
             rfid_1_PrevFuelScanMsg = rfid_1_FuelScanMsg                                                         # update previous RFID for lane 1
-            log2journal.info("RFID_L1_Q Read : <%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_SequentialReads)     # log the current RFID
+            log2journal.info("RFID_L1_Q Read : <%s><%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_Reader.get_tag() ,rfid_1_SequentialReads)     # log the current RFID
 
 
         # lane 2 RFID reader queue
@@ -448,19 +469,19 @@ if __name__ == '__main__':
             else :
                 rfid_2_NullPolls += 1
                 rfid_2_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_2_FuelScanMsg = "POLLING-" + str(rfid_2_NullPolls)
+                rfid_2_FuelScanMsg = "L2-"+MSG_POLLING + '-' + str(rfid_2_NullPolls)
                 log2journal.info("<%s>", repr(rfid_2_FuelScanMsg))
         else :
             rfid_2_NullPolls = 0
             rfid_2_Reader.update_tag(rfid_2_Queue.get(True), Q_READY)
-            rfid_2_FuelScanMsg = "2-BBT" + rfid_2_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n'   # VID 800 outputs \r\n in the msg
+            rfid_2_FuelScanMsg = "2-BBT" + rfid_2_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n'   # VID 800 outputs \r\n in the msg
             rfid_2_SequentialReads += 1
                                                                      # increment the counter for RFID reader 2
             if rfid_2_FuelScanMsg != rfid_2_PrevFuelScanMsg:
                 rfid_2_SequentialReads = 1
 
             rfid_2_PrevFuelScanMsg = rfid_2_FuelScanMsg                                                         # update previous RFID for lane 2
-            log2journal.info("RFID_L2_Q Read : <%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_SequentialReads)   # repr to show escape characters like \n
+            log2journal.info("RFID_L2_Q Read : <%s><%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_Reader.get_tag() ,rfid_2_SequentialReads)   # repr to show escape characters like \n
 
         ##########################
         # Flush VID detector queue
@@ -514,15 +535,18 @@ if __name__ == '__main__':
         if (msg2BusNum(vid_L1_Msg) == msg2BusNum(rfid_1_FuelScanMsg)):
             vid_1_MatchesRfid1 = "V1==R1"  #
 
-        tagId = rfid_1_Reader.get_tag()
-        lastTagId =  rfid_1_Reader.get_last_tag()
+        tagId       = rfid_1_Reader.get_tag()
+        lastTagId   =  rfid_1_Reader.get_last_tag()
 
         if (rfid_1_SequentialReads > LANE_1_MIN) :                                                 # get LANE_1_MIN_ consecutive reads to trust the data
             rfidLanes = "TAG_L1"
+
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]):                                             # Flag if the RFID is seen in both lanes
                 rfidLanes = "TAG-1&2"
-                log2journal.info("TAG-1&2 : <%s>", repr(rfid_1_FuelScanMsg))
-                log_result(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, batteryStatus(tagId), vid_1_MatchesRfid1, rfidLanes)
+
+            log2journal.info("%s : <%s>", rfidLanes, repr(rfid_1_FuelScanMsg))
+            log2CSV(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, batteryStatus(tagId), vid_1_MatchesRfid1, rfidLanes)
+
             if((MSG_POLLING != rfid_1_FuelScanMsg) and (MSG_EMPTY != rfid_1_FuelScanMsg)):
                 sendToSerial4(rfid_1_FuelScanMsg)
 
@@ -530,7 +554,7 @@ if __name__ == '__main__':
         elif (vid_L1_Msg != MSG_EMPTY):
             rfidLanes = "TAG_NONE"
             if( is_vid_in_scope(msg2BusNum(vid_L1_Msg), csvFleetList)) :
-                log_result(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ,   vidsListSize,  batteryStatus(tagId), vid_1_MatchesRfid1, rfidLanes)
+                log2CSV(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ,   vidsListSize,  batteryStatus(tagId), vid_1_MatchesRfid1, rfidLanes)
                 sendToSerial4(vid_L1_Msg) # send to serial port 4
             else :
                 log2journal.info("L1_VID FWD : <%s>", repr(vid_L1_Msg))
@@ -544,16 +568,18 @@ if __name__ == '__main__':
         if (msg2BusNum(vid_L2_Msg) == msg2BusNum(rfid_2_FuelScanMsg)):
             vid_2_MatchesRfid2 = "V2==R2"
 
-        tagId = rfid_2_Reader.get_tag()
-        lastTagId =  rfid_2_Reader.get_last_tag()
+        tagId       = rfid_2_Reader.get_tag()
+        lastTagId   =  rfid_2_Reader.get_last_tag()
 
         if (rfid_2_SequentialReads > LANE_2_MIN) :                                                 # and vid_L2_Msg == rfid_2_FuelScanMsg:
             rfidLanes = "TAG_L2"
+
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]) :                                            # Flag if the RFID is seen in both lanes
                 rfidLanes = "TAG-2&1"
-                log2journal.info("TAG-2&1 : <%s>", repr(rfid_2_FuelScanMsg))
 
-            log_result(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, batteryStatus(tagId), vid_2_MatchesRfid2, rfidLanes)
+            log2journal.info("%s : <%s>", rfidLanes, repr(rfid_2_FuelScanMsg))
+            log2CSV(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, batteryStatus(tagId), vid_2_MatchesRfid2, rfidLanes)
+
             if((MSG_POLLING != rfid_2_FuelScanMsg) and (MSG_EMPTY != rfid_2_FuelScanMsg)):
                 sendToSerial4(rfid_2_FuelScanMsg)
 
@@ -561,7 +587,7 @@ if __name__ == '__main__':
         elif (vid_L2_Msg != MSG_EMPTY) :
             rfidLanes = "TAG_NONE"
             if (is_vid_in_scope(msg2BusNum(vid_L2_Msg), csvFleetList)) :
-                log_result(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ,  vidsListSize,   batteryStatus(tagId), vid_2_MatchesRfid2, rfidLanes)
+                log2CSV(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ,  vidsListSize,   batteryStatus(tagId), vid_2_MatchesRfid2, rfidLanes)
                 sendToSerial4(vid_L2_Msg)
             else :
                 log2journal.info("L2_VID FWD : <%s>", repr(vid_L2_Msg))

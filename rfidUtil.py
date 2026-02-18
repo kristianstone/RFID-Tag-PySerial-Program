@@ -22,7 +22,8 @@ def get_results_filename():
     Generates a data log file name based on the current date.
     The format is 'results_YYYYMMDD.csv'.
     """
-    return f"results_{dt.datetime.now().strftime('%Y%m%d')}.csv"
+    #return f"results_{dt.datetime.now().strftime('%Y%m%d')}.csv"
+    return "logs/log.csv"
 
 # extract fleet number from VID String
 def msg2BusNum(msg):

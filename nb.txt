@@ -32,7 +32,7 @@ RealNVC Passwd: cooporate
 
 Modem Admin
 ===========
-NightHawk Console ID: 
+NightHawk Console ID:
 NightHawk Passwd: ToowongFMS
 
 
@@ -141,7 +141,7 @@ Keep only the last 2 days of logs
 
 Reduce the journal to a specific size (e.g., 100MB):
 ----------------------------------------------------
-    sudo journalctl --vacuum-size=100M 
+    sudo journalctl --vacuum-size=100M
 
 Make Permanent Configuration Changes to Systemd
 ===============================================
@@ -151,5 +151,30 @@ Make Permanent Configuration Changes to Systemd
 
 Save and exit (Ctrl+O, Enter, Ctrl+X), then restart the service:
 ----------------------------------------------------------------
-    sudo systemctl restart systemd-journald 
+    sudo systemctl restart systemd-journald
 
+
+
+Setup logging to be managed by logrotate
+----------------------------------------
+
+/home/pi/rfid/logs/log.csv {
+    daily           # rotate each day
+    rotate 7        # log files are rotated 7 times before old ones are removed
+    compress        # gzip the rotated files
+    missingok       # Ignore if the log file is missing
+    notifempty      # Do not rotate if the file is empty
+    delaycompress   # Delay compression until the next rotation cycle.
+}
+
+set mode of /home/pi/rfid/logs to 644
+-------------------------------------
+sudo chmod 644 /home/pi/rfid/logs
+
+Force log rotation
+------------------
+sudo logrotate -f /etc/logrotate.conf
+
+Debug the rotate config file
+----------------------------
+sudo logrotate /etc/logrotate.d/rfid --debug

@@ -213,7 +213,7 @@ while True:
         rfid_1_NullPolls = 0 # reset empty counter if queue is not empty
         rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' # not sure if new line required for final build
+        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n' # not sure if new line required for final build
         seqNumFuelScanMsgFromRFID1 += 1
         if rfid_1_FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read
@@ -233,7 +233,7 @@ while True:
     else:
         rfid_2_NullPolls = 0
         rfid_2_Reader.update_tag(rfid_2_Queue.get(True))
-        rfid_2_FuelScanMsg = "2-BBT" + rfid_2_Reader.get_fleetNumber(csvFleetList) + ",00000000" + '\r\n' #VID 800 outputs \r and \n
+        rfid_2_FuelScanMsg = "2-BBT" + rfid_2_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n' #VID 800 outputs \r and \n
         seqNumFuelScanMsgFromRFID2 += 1 # increment the counter for RFID reader 2
         if rfid_2_FuelScanMsg != prevFuelScanMsgFromRFID2:
             seqNumFuelScanMsgFromRFID2 = 0
