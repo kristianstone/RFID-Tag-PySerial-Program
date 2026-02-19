@@ -1,4 +1,3 @@
-import subprocess
 import serial
 import datetime as dt
 import threading
@@ -15,9 +14,11 @@ import logging
 
 from cysystemd.journal import JournaldLogHandler
 
+
 from rfidConstants  import *
 from rfidClasses    import *
 from rfidUtil       import *
+from getGit         import *
 
 #############################################################
 #############################################################
@@ -29,49 +30,6 @@ from rfidUtil       import *
 #############################################################
 #############################################################
 #############################################################
-
-def get_git_short_hash():
-    """
-    Docstring for get_git_short_hash
-    """
-    try:
-        # Run the git command to get the short commit hash of HEAD
-        result = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE, check=True, text=True)
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        return f"Error running git command: {e}"
-    except FileNotFoundError:
-        return "Git executable not found in PATH"
-
-
-def get_latest_git_tag():
-    # Use 'git describe --tags --abbrev=0' to get the latest tag name
-    try:
-        result = subprocess.run(
-            ['git', 'describe', '--tags', '--abbrev=0'],
-            capture_output=True, text=True, check=True
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        return None # No tags found
-
-def get_git_committer_info():
-    # Use 'git show' with a specific format to get name and email
-    try:
-        # --format='%cn <%ce>' gets committer name and email
-        # -s suppresses the diff output
-        result = subprocess.check_output(
-            ['git', 'show', '-s', '--format=%cn <%ce>', 'HEAD'],
-            stderr=subprocess.STDOUT,
-            text=True
-        ).strip()
-        return result
-    except subprocess.CalledProcessError as e:
-        return f"Error running git command: {e.output}"
-    except FileNotFoundError:
-        return "Error: 'git' command not found. Is Git installed and in the system PATH?"
-
-
 
 if __name__ == '__main__':
 
@@ -90,9 +48,17 @@ if __name__ == '__main__':
 
 
 
+    ##########
+    # Git Info
+    ##########
+
     print(f"Git Short Commit ID: {get_git_short_hash()}")
     print(f"Git Latest Tag: {get_latest_git_tag()}")
     print(f"Git Committer: {get_git_committer_info()}")
+
+    last_commit_date = get_commit_date()
+    if last_commit_date:
+        print(f"Git Last Commit Date is: {last_commit_date}")
 
 
 
@@ -330,11 +296,11 @@ if __name__ == '__main__':
     # Diagnostic Logging  to CSV
     ############################
     # considering another column which has flags that describe the mismatch issue
-    def log2CSV( when, msgOrigin, vidMsg, tagMsg, tagNum, prevTagNum, seqNum, nullPolls, vidMatchesTag, tagsLane):
+    def log2CSV( when, msgOrigin, vidMsg, tagMsg, tagNum, prevTagNum, seqNum, nullPolls, vidMatchesTag, tagCntInLane):
         """
         Stores the results of the program into a CSV file for data analysis.
         Data is placed into columns:
-                    when,   lane,       vidMsg, tagMsg,    tagNum,   prevTagNum,    seqNum,  nullPolls,  vidMatchesTag, tagsLane
+                    when,   lane,       vidMsg, tagMsg,    tagNum,   prevTagNum,    seqNum,  nullPolls,  vidMatchesTag, tagCntInLane
 
         Args:
             when            : The current date and time
@@ -346,7 +312,7 @@ if __name__ == '__main__':
             seqNum          : Number of sequential Tag detections
             nullPolls       : Number of polls when queue was empty
             vidMatchesTag   : Flag showing if VID and Tag correlate
-            tagsLane        : Indicate which lane(s) the Tag in
+            tagCntInLane        : Indicate which lane(s) the Tag in
 
         Raises:
             Exception: An error occured writing to the CSV file.
@@ -364,13 +330,13 @@ if __name__ == '__main__':
         msgV    = repr(vidMsg)
         msgVlen = len(vidMsg)
 
-        msgR    = repr(tagMsg)
+        msgT    = repr(tagMsg)
         battery = batteryStatus(tagNum)
 
         if(msgVlen == STD_MSG_LEN) :
-            log2journal.debug("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgR,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagsLane)
+            log2journal.debug("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
         else :
-            log2journal.error("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgR,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagsLane)
+            log2journal.error("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
 
 
         # create headers for csv file
@@ -378,7 +344,7 @@ if __name__ == '__main__':
 
         try:
             with open(CSV_LOG_FILE, mode='a', encoding="utf-8", newline='') as csvfile:
-                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','RFIDMsg','TagNum','TagSeqNum','NullPolls','PrevRfidNum','TagSeqNum','NullPolls','BatteryStatus','VIDmatchsTag','TagLane']
+                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagLane']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 if write_header:                                                                            # write header only if the file is new or has changed date
                     writer.writeheader()
@@ -387,14 +353,14 @@ if __name__ == '__main__':
                     'TagOrigin'         : msgOrigin,
                     'VIDMsg'            : msgV,
                     'VIDMsgLen'         : msgVlen,
-                    'RFIDMsg'           : msgR,
+                    'TagMsg'            : msgT,
                     'TagNum'            : tagNum,
                     'TagSeqNum'         : seqNum,
                     'NullPolls'         : nullPolls,
                     'PrevTagNum'        : prevTagNum,
                     'BatteryStatus'     : battery,
                     'VIDmatchsTag'      : vidMatchesTag,
-                    'TagLane'           : tagsLane
+                    'TagsInLane'        : tagCntInLane
                 })
         except Exception as e:
             log2journal.error("Error writing CSV line to file {CSV_LOG_FILE}: {%s}",e)
@@ -450,9 +416,12 @@ if __name__ == '__main__':
 
     log2journal.info("RFID Reader ready to enter Main Loop")
 
-    ##############################################################################
-    ## Main Loop - this will run continuously to read from queues and process data
-    ##############################################################################
+
+##############################################################################
+##############################################################################
+## Main Loop - this will run continuously to read from queues and process data
+##############################################################################
+##############################################################################
     while True:
         # time of event
         now = dt.datetime.now()
@@ -570,28 +539,28 @@ if __name__ == '__main__':
         lastTagId   =  rfid_1_Reader.get_last_tag()
 
         if (rfid_1_SequentialReads > LANE_1_MIN) :                                              # get LANE_1_MIN_ consecutive reads to trust the data
-            tagsLane = "TAG_L1"
+            tagsIn = "TAG_L1"
 
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]):                             # Flag if the RFID is seen in both lanes
-                tagsLane = "TAG-1&2"
+                tagsIn = "TAG-1&2"
 
-            log2journal.debug("%s : <%s>", tagsLane, repr(rfid_1_FuelScanMsg))
-            log2CSV(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, vid_1_MatchesRfid1, tagsLane)
+            log2journal.debug("%s : <%s>", tagsIn, repr(rfid_1_FuelScanMsg))
+            log2CSV(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, vid_1_MatchesRfid1, tagsIn)
 
             if((MSG_POLLING != rfid_1_FuelScanMsg) and (MSG_EMPTY != rfid_1_FuelScanMsg)):
                 sendToSerial4(rfid_1_FuelScanMsg)
 
         # record regardless of RFID, but only if VID is in scope
         elif (vid_L1_Msg != MSG_EMPTY):
-            tagsLane = "TAG_NONE"
+            tagIn = "TAG_NONE"
             if( is_vid_in_scope(msg2BusNum(vid_L1_Msg), csvFleetList)) :
-                log2CSV(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsLane)
+                log2CSV(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsIn)
                 sendToSerial4(vid_L1_Msg) # send to serial port 4
             else :
                 if (len(vid_L1_Msg) == STD_MSG_LEN):
                     log2journal.debug("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg), len(vid_L1_Msg))
                 else :
-                    log2journal.error("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg, len(vid_L1_Msg)))
+                    log2journal.error("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg), len(vid_L1_Msg))
 
                 sendToSerial4(vid_L1_Msg)         # send to serial port 4
 
@@ -607,22 +576,22 @@ if __name__ == '__main__':
         lastTagId   =  rfid_2_Reader.get_last_tag()
 
         if (rfid_2_SequentialReads > LANE_2_MIN) :                                              # and vid_L2_Msg == rfid_2_FuelScanMsg:
-            tagsLane = "TAG_L2"
+            tagsIn = "TAG_L2"
 
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]) :                            # Flag if the RFID is seen in both lanes
-                tagsLane = "TAG-2&1"
+                tagsIn = "TAG-2&1"
 
-            log2journal.debug("%s : <%s>", tagsLane, repr(rfid_2_FuelScanMsg))
-            log2CSV(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, vid_2_MatchesRfid2, tagsLane)
+            log2journal.debug("%s : <%s>", tagsIn, repr(rfid_2_FuelScanMsg))
+            log2CSV(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, vid_2_MatchesRfid2, tagsIn)
 
             if((MSG_POLLING != rfid_2_FuelScanMsg) and (MSG_EMPTY != rfid_2_FuelScanMsg)):
                 sendToSerial4(rfid_2_FuelScanMsg)
 
         # record regardless of RFID, but only if VID is in scope
         elif (vid_L2_Msg != MSG_EMPTY) :
-            tagsLane = "TAG_NONE"
+            tagsIn = "TAG_NONE"
             if (is_vid_in_scope(msg2BusNum(vid_L2_Msg), csvFleetList)) :
-                log2CSV(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsLane)
+                log2CSV(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsIn)
                 sendToSerial4(vid_L2_Msg)
             else :
                 if (len(vid_L2_Msg) == STD_MSG_LEN):
