@@ -135,6 +135,20 @@ Follow the journal the specified unit (Service)
 -----------------------------------------------
     journalctl -f -u rfid-fuellane-id.service -n100
 
+    journalctl -f -l -p7 --no-hostname -u rfid-fuellane-id.service -n100
+
+to exclude logging Levels use -p7
+---------------------------------
+0: emerg
+1: alert
+2: crit
+3: err
+4: warning
+5: notice
+6: info
+7: debug
+Example: To see only errors, critical, alerts, and emergency messages, use -p 3 (or err).
+
 Keep only the last 2 days of logs
 ----------------------------------
     sudo journalctl --vacuum-time=2d
@@ -142,7 +156,6 @@ Keep only the last 2 days of logs
 Dump journal to a file
 ----------------------
     sudo journalctl -o short-precise -l -u  rfid-fuellane-id.service > journals/20260219.log
-
 
 Reduce the journal to a specific size (e.g., 100MB):
 ----------------------------------------------------
