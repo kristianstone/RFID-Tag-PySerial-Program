@@ -174,6 +174,7 @@ if __name__ == '__main__':
     cmdLineParser.add_argument("--emptyLaneMin","-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
     cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="0 disables logging to csv. 1 Enables logging to CSV file")
     cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="0 disables forwarding. 1 Enables forwarding")
+    cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=0, help="0 NOTSET, 1 DEBUG, 2 INFO, 3 WARNING, 4 ERROR, 5 CRITICAL")
 
     cmdLineArgs = cmdLineParser.parse_args()
 
@@ -187,8 +188,21 @@ if __name__ == '__main__':
     if (1 == cmdLineArgs.fwdViaSerial):
         SEND_TO_SERIAL_4 = True
 
-    log2journal.info("Parameters: LeftLaneMin=%d  RightLaneMin=%d  EmptyMin=%d", LANE_1_MIN, LANE_2_MIN, LANE_EMPTY_MIN)
-    log2journal.info("Parameters: RecordToCSV=%s SendToSerial=%s", LOG_TO_CSV, SEND_TO_SERIAL_4)
+    if (0 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.NOTSET)
+    elif (1 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.DEBUG)
+    elif (2 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.INFO)
+    elif (3 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.WARNING)
+    elif (4 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.ERROR)
+    elif (5 == cmdLineArgs.debugLevel):
+        log2journal.setLevel(logging.CRITICAL)
+
+    log2journal.info("Parameters: LeftLaneMin=%d  RightLaneMin=%d  EmptyMin=%d"     , LANE_1_MIN, LANE_2_MIN,       LANE_EMPTY_MIN)
+    log2journal.info("Parameters: RecordToCSV=%s  SendToSerial=%s  LogLevel %d0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
 
 
 
@@ -351,7 +365,11 @@ if __name__ == '__main__':
         msgR    = repr(tagMsg)
         battery = batteryStatus(tagNum)
 
-        log2journal.info("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgR,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagsLane)
+        if(msgVlen == STD_MSG_LEN) :
+            log2journal.info("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgR,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagsLane)
+        else :
+            log2journal.error("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgR,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagsLane)
+
 
         # create headers for csv file
         write_header = (not (os.path.exists(CSV_LOG_FILE)) or (os.stat(CSV_LOG_FILE).st_size == 0))
@@ -568,7 +586,11 @@ if __name__ == '__main__':
                 log2CSV(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsLane)
                 sendToSerial4(vid_L1_Msg) # send to serial port 4
             else :
-                log2journal.info("L1_VID FWD : <%s>", repr(vid_L1_Msg))
+                if (len(vid_L1_Msg) == STD_MSG_LEN):
+                    log2journal.info("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg), len(vid_L1_Msg))
+                else :
+                    log2journal.error("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg, len(vid_L1_Msg)))
+
                 sendToSerial4(vid_L1_Msg)         # send to serial port 4
 
 
@@ -601,7 +623,10 @@ if __name__ == '__main__':
                 log2CSV(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsLane)
                 sendToSerial4(vid_L2_Msg)
             else :
-                log2journal.info("L2_VID FWD : <%s>", repr(vid_L2_Msg))
+                if (len(vid_L2_Msg) == STD_MSG_LEN):
+                    log2journal.info("L2_VID FWD : <%s><%d>", repr(vid_L2_Msg),len(vid_L2_Msg))
+                else :
+                    log2journal.error("L2_VID FWD : <%s><%d>", repr(vid_L2_Msg),len(vid_L2_Msg))
                 sendToSerial4(vid_L2_Msg)
 
         # RFID Reader and VID are on 1 sec period

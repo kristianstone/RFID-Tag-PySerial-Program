@@ -171,6 +171,7 @@ Setup logging to be managed by logrotate
     dateformat -%Y-%m-%d
     extension .csv
     compress
+    comprescmd gzip
     missingok
     notifempty
     delaycompress

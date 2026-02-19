@@ -16,3 +16,5 @@ Q_READY:int     = 1         # something on the Q  to be read
 MSG_INIT:str    =   "INIT"
 MSG_EMPTY:str   =   "EMPTY"
 MSG_POLLING:str =   "POLLING"
+
+STD_MSG_LEN = len("2-BBT2931,00000000\r\n")
