@@ -19,7 +19,7 @@ class Reader:
     """
 
     # false if no tag, tagNumber = "Empty"
-    def __init__(self, status, tagNumber):
+    def __init__(self, tagNumber):
         """
         Initializes an instance based on status and tag number
 
@@ -28,7 +28,6 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.status         = status        # instance attribute
         self.tagNumber      = tagNumber     # instance attribute
         self.lastTagNumber  = tagNumber
         self.qStatus        = Q_EMPTY
@@ -44,7 +43,7 @@ class Reader:
         return self.status
 
 
-    def find_first_unprintable(self, s):
+    def find_first_unprintable(self, s) -> int:
         for i, char in enumerate(s):
             if not char.isprintable():
                 return i                    # Return the index immediately upon finding the first unprintable char
@@ -52,7 +51,7 @@ class Reader:
 
 
     # get tag
-    def get_tag(self):
+    def get_tag(self) -> str :
         """
         Returns the string of the RFID tag/ VID Tag currently being detected
         """
@@ -64,7 +63,7 @@ class Reader:
 
 
     # get tag
-    def get_last_tag(self):
+    def get_last_tag(self) -> str:
         """
         Returns the string of the Last  RFID tag/ VID Tag detected
         """
@@ -74,16 +73,6 @@ class Reader:
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         return self.lastTagNumber[:index]
 
-
-    # change status
-    def change_status(self, newStatus):
-        """
-        May no longer be required
-
-        Args:
-            newStatus:
-        """
-        self.status = newStatus
 
 
     # change tag

@@ -139,6 +139,11 @@ Keep only the last 2 days of logs
 ----------------------------------
     sudo journalctl --vacuum-time=2d
 
+Dump journal to a file
+----------------------
+    sudo journalctl -o short-precise -l -u  rfid-fuellane-id.service > journals/20260219.log
+
+
 Reduce the journal to a specific size (e.g., 100MB):
 ----------------------------------------------------
     sudo journalctl --vacuum-size=100M
@@ -159,13 +164,19 @@ Setup logging to be managed by logrotate
 ----------------------------------------
 
 /home/pi/rfid/logs/log.csv {
-    daily           # rotate each day
-    rotate 7        # log files are rotated 7 times before old ones are removed
-    compress        # gzip the rotated files
-    missingok       # Ignore if the log file is missing
-    notifempty      # Do not rotate if the file is empty
-    delaycompress   # Delay compression until the next rotation cycle.
+    create
+    daily
+    rotate 7
+    dateext
+    dateformat -%Y-%m-%d
+    extension .csv
+    compress
+    missingok
+    notifempty
+    delaycompress
+    su pi pi
 }
+
 
 set mode of /home/pi/rfid/logs to 644
 -------------------------------------
@@ -178,3 +189,7 @@ sudo logrotate -f /etc/logrotate.conf
 Debug the rotate config file
 ----------------------------
 sudo logrotate /etc/logrotate.d/rfid --debug
+
+xz is required for logrotate compression
+----------------------------------------
+sudo apt-get install xz-utils
