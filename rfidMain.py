@@ -344,7 +344,7 @@ if __name__ == '__main__':
 
         try:
             with open(CSV_LOG_FILE, mode='a', encoding="utf-8", newline='') as csvfile:
-                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagLane']
+                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagsInLane']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 if write_header:                                                                            # write header only if the file is new or has changed date
                     writer.writeheader()
