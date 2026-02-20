@@ -135,12 +135,16 @@ if __name__ == '__main__':
     # Collect commandline args
     ###########################
     cmdLineParser = argparse.ArgumentParser(description=" Looking back down the fuel lane from the front of the Bus\r\n LEFT Lane is Lane 1\r\n Right Lane is lane 2")
-    cmdLineParser.add_argument("--leftLaneMin", "-l", type=int, default=5, help="Min number of consecutive Tag reads before is declared present in Lane 1.")
-    cmdLineParser.add_argument("--rightLaneMin","-r", type=int, default=5, help="Min number of consecutive Tag reads before is declared present in Lane 2.")
+
+    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="0 disables logging to csv. [1] Enables logging to CSV file")
+    cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="0 NOTSET, [1] DEBUG, 2 INFO, 3 WARNING, 4 ERROR, 5 CRITICAL")
+
     cmdLineParser.add_argument("--emptyLaneMin","-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
-    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="0 disables logging to csv. 1 Enables logging to CSV file")
-    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="0 disables forwarding. 1 Enables forwarding")
-    cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="0 NOTSET, 1 DEBUG, 2 INFO, 3 WARNING, 4 ERROR, 5 CRITICAL")
+
+    cmdLineParser.add_argument("--leftLaneMin", "-l", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 1.")
+    cmdLineParser.add_argument("--rightLaneMin","-r", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 2.")
+
+    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] disables forwarding. 1 Enables forwarding")
 
     cmdLineArgs = cmdLineParser.parse_args()
 
@@ -170,7 +174,7 @@ if __name__ == '__main__':
         log2journal.setLevel(logging.DEBUG)
 
     log2journal.info("Parameters: LeftLaneMin=%d     RightLaneMin=%d     EmptyMin=%d"     , LANE_1_MIN, LANE_2_MIN,       LANE_EMPTY_MIN)
-    log2journal.info("Parameters: RecordToCSV=%s  SendToSerial=%s LogLevel=%d0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
+    log2journal.info("Parameters: RecordToCSV=%s  SendToSerial=%s LogLevel=(%d)0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
 
 
 
@@ -412,7 +416,7 @@ if __name__ == '__main__':
         """
         # ToDo can do another last minute check to only allow WellFormatted msgs out
         if(True is SEND_TO_SERIAL_4):
-            log2journal.debug("Serial OUT:%s", repr(msg))
+            log2journal.debug("Serial OUT:<%s>", repr(msg))
             plc_Out.write(msg.encode('utf-8'))
 
 
