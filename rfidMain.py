@@ -410,6 +410,7 @@ if __name__ == '__main__':
 
         :param msg: Description
         """
+        # ToDo can do another last minute check to only allow WellFormatted msgs out
         if(True is SEND_TO_SERIAL_4):
             log2journal.debug("Serial OUT:%s", repr(msg))
             plc_Out.write(msg.encode('utf-8'))
@@ -565,7 +566,7 @@ if __name__ == '__main__':
                 else :
                     log2journal.error("L1_VID Short :<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
                     if (len(vid_L1_Msg) == VID_MSG_MISSING_ODO_LEN):
-                        sendToSerial4((vid_L1_Msg + ",00000000" + '\r\n'))         # send to serial port 4
+                        sendToSerial4((vid_L1_Msg[:-2] + ",00000000" + '\r\n'))         # send to serial port 4
 
 
 
@@ -604,7 +605,7 @@ if __name__ == '__main__':
                 else :
                     log2journal.error("L2_VID Short :<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
                     if (len(vid_L2_Msg) == VID_MSG_MISSING_ODO_LEN):
-                        sendToSerial4((vid_L2_Msg + ",00000000" + '\r\n'))         # send to serial port 4
+                        sendToSerial4((vid_L2_Msg[:-2] + ",00000000" + '\r\n'))         # send to serial port 4
 
         # RFID Reader and VID are on 1 sec period
         # slightly over sample to ensure keeping up
