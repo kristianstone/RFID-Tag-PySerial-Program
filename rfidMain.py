@@ -173,8 +173,8 @@ if __name__ == '__main__':
     else :
         log2journal.setLevel(logging.DEBUG)
 
-    log2journal.info("Parameters: LeftLaneMin=%d     RightLaneMin=%d     EmptyMin=%d"     , LANE_1_MIN, LANE_2_MIN,       LANE_EMPTY_MIN)
-    log2journal.info("Parameters: RecordToCSV=%s  SendToSerial=%s LogLevel=(%d)0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
+    log2journal.info("Parameters: <-l[x]>LeftLaneMin=%d       <-l[x]>RightLaneMin=%d       <-e[x]>EmptyMin=%d"     , LANE_1_MIN, LANE_2_MIN,       LANE_EMPTY_MIN)
+    log2journal.info("Parameters: <-c[0,1]>RecordToCSV=%s  <-s[0,1]>SendToSerial=%s <-l[1,2,3,4,5]>LogLevel=(%d)0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
 
 
 
