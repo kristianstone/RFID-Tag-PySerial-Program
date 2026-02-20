@@ -331,12 +331,13 @@ if __name__ == '__main__':
         msgVlen = len(vidMsg)
 
         msgT    = repr(tagMsg)
+        msgTlen = len(msgT)
         battery = batteryStatus(tagNum)
 
-        if(msgVlen == STD_MSG_LEN) :
-            log2journal.debug("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
+        if(msgVlen == STD_MSG_LEN):
+            log2journal.debug("CSV %s,%s,%d,%s,<%d>,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
         else :
-            log2journal.error("CSV %s,%s,<%d>,%s,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
+            log2journal.error("CSV %s,%s,%d,%s,<%d>,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
 
 
         # create headers for csv file
@@ -344,7 +345,7 @@ if __name__ == '__main__':
 
         try:
             with open(CSV_LOG_FILE, mode='a', encoding="utf-8", newline='') as csvfile:
-                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagsInLane']
+                fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagMsgLen','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagsInLane']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 if write_header:                                                                            # write header only if the file is new or has changed date
                     writer.writeheader()
@@ -354,6 +355,7 @@ if __name__ == '__main__':
                     'VIDMsg'            : msgV,
                     'VIDMsgLen'         : msgVlen,
                     'TagMsg'            : msgT,
+                    'TagMsgLen'         : msgTlen,
                     'TagNum'            : tagNum,
                     'TagSeqNum'         : seqNum,
                     'NullPolls'         : nullPolls,
@@ -409,12 +411,12 @@ if __name__ == '__main__':
         :param msg: Description
         """
         if(True is SEND_TO_SERIAL_4):
-            log2journal.debug(repr(msg))
+            log2journal.debug("Serial OUT:%s", repr(msg))
             plc_Out.write(msg.encode('utf-8'))
 
 
 
-    log2journal.info("RFID Reader ready to enter Main Loop")
+    log2journal.info("RFID Reader ENTER Main Loop")
 
 
 ##############################################################################
@@ -558,11 +560,13 @@ if __name__ == '__main__':
                 sendToSerial4(vid_L1_Msg) # send to serial port 4
             else :
                 if (len(vid_L1_Msg) == STD_MSG_LEN):
-                    log2journal.debug("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg), len(vid_L1_Msg))
+                    log2journal.debug("L1_VID FWD :<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
+                    sendToSerial4(vid_L1_Msg)         # send to serial port 4
                 else :
-                    log2journal.error("L1_VID FWD : <%s><%d>", repr(vid_L1_Msg), len(vid_L1_Msg))
+                    log2journal.error("L1_VID Short :<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
+                    if (len(vid_L1_Msg) == VID_MSG_MISSING_ODO_LEN):
+                        sendToSerial4((vid_L1_Msg + ",00000000" + '\r\n'))         # send to serial port 4
 
-                sendToSerial4(vid_L1_Msg)         # send to serial port 4
 
 
         # lane 2 rfid_2
@@ -595,10 +599,12 @@ if __name__ == '__main__':
                 sendToSerial4(vid_L2_Msg)
             else :
                 if (len(vid_L2_Msg) == STD_MSG_LEN):
-                    log2journal.debug("L2_VID FWD : <%s><%d>", repr(vid_L2_Msg),len(vid_L2_Msg))
+                    log2journal.debug("L2_VID FWD :<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
+                    sendToSerial4(vid_L2_Msg)
                 else :
-                    log2journal.error("L2_VID FWD : <%s><%d>", repr(vid_L2_Msg),len(vid_L2_Msg))
-                sendToSerial4(vid_L2_Msg)
+                    log2journal.error("L2_VID Short :<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
+                    if (len(vid_L2_Msg) == VID_MSG_MISSING_ODO_LEN):
+                        sendToSerial4((vid_L2_Msg + ",00000000" + '\r\n'))         # send to serial port 4
 
         # RFID Reader and VID are on 1 sec period
         # slightly over sample to ensure keeping up
