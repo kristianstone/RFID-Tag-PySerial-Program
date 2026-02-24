@@ -81,22 +81,23 @@ Create and Edit the service File
 --------------------------------
     sudo nano /lib/systemd/system/rfid-fuellane-id.service
 <<<
+
 [Unit]
-Description=FMS RFID for Fuel Lane Id
+Description=FMS RFID Reader for Fuel Lane Id
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=/home/pi/rfid
-# full and absolute path allows script to be run as a service
-ExecStart=/home/pi/rfid/rfidenv/bin/python3 -u /home/pi/rfid/rfidMain.py
+ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py -s 0  -c 1  -d 1  -e 3  -l 5  -r 5  -s 0
 User=pi
-# Optionally, add Restart options to make the service automatically restart if it crashes
+# Restart the service automatically restart if it crashes
 Restart=on-failure
 RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
+
 >>>
 
 Set Permissions on the Service files
@@ -209,3 +210,116 @@ sudo logrotate /etc/logrotate.d/rfid --debug
 xz is required for logrotate compression
 ----------------------------------------
 sudo apt-get install xz-utils
+
+
+
+Push or Pull files from server to Pi
+------------------------------------
+
+systemd service
+systemd timer
+
+rsync -avz --contimeout=10  username@remote_server:/path/to/source/file_or_directory    /path/to/local/destination/
+scp                         username@remote_server:/path/to/source/file                 /path/to/local/destination/
+
+ scp fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/test.csv
+ mv /home/pi/rfid/test.csv /home/pi/rfid/TEST.CSV
+ sudo chmod 644 /home/pi/rfid/TEST.CSV
+
+
+Setup SSHD on Windoze11
+-----------------------
+https://windowsforum.com/threads/enable-scp-on-windows-11-with-openssh-server-for-secure-cross-platform-transfers.400665/
+https://superuser.com/questions/1451241/command-to-copy-client-public-key-to-windows-openssh-sftp-ssh-server-authorized
+PowerShell as Administrator.
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+Start-Service sshd
+Restart-Service sshd
+Set-Service -Name sshd -StartupType Automatic
+
+Server Config here:
+-------------------
+C:\ProgramData\ssh\sshd_config
+
+Should be done
+--------------
+New-NetFirewallRule -Name sshd -DisplayName 'OpenSSH Server (sshd)'  -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 -Profile Private
+
+
+Create Key-Pair
+---------------
+ssh-keygen -t ed25519 -C fms2@10.83.58.53
+
+Key Goes here according to
+--------------------------
+whoami /groups
+C:\ProgramData\ssh\administrators_authorized_keys.
+%USERPROFILE%\.ssh\authorized_keys.
+
+Comment out thises lines from C:\ProgramData\ssh\sshd_config
+------------------------------------------------------------
+# Match Group administrators
+#     AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
+
+
+
+icacls.exe administrators_authorized_keys
+icacls.exe administrators_authorized_keys /inheritance:r
+icacls.exe administrators_authorized_keys /grant SYSTEM:F
+icacls.exe administrators_authorized_keys /grant Administrators:F
+
+
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
+
+
+
+
+
+
+
+add sha1sum to powershell
+-------------------------
+powershell wsl --install
+
+sha1sum fleet_list.csv > fleet_list.host.sha1
+
+
+rfid-getFleetList.service
+----------------------
+[Unit]
+Description=Retrieve FleetList from Host
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/scp fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/test.csv
+# migrate to a script to check if changed
+# ie check a sha1Sum
+# Alternatively, for syncing:
+# ExecStart=/usr/bin/rsync -avz user@remote-server:/path/to/remote/file /local/destination/path/
+User=pi
+
+rfid-getFleetList.timer
+--------------------
+[Unit]
+Description=Retrieve FleetList from Host every 1hr
+
+[Timer]
+# Run 5 minutes after boot
+OnBootSec=5min
+# Run every 1 hour thereafter
+OnUnitActiveSec=1h
+Unit=rfid-getFleetList.service
+
+[Install]
+WantedBy=timers.target
+
+
+Activate File Retrieval
+-----------------------
+sudo systemctl daemon-reload
+sudo systemctl enable --now rfid-getFleetList.timer
+run now
+-------
+sudo systemctl start rfid-getFleetList.service
