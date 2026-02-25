@@ -309,7 +309,7 @@ Description=Retrieve FleetList from Host every 1hr
 # Run 5 minutes after boot
 OnBootSec=5min
 # Run every 1 hour thereafter
-OnUnitActiveSec=1h
+OnUnitActiveSec=3h
 Unit=rfid-getFleetList.service
 
 [Install]

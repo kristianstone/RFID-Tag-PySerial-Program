@@ -7,20 +7,24 @@ import sqlite3
 app = Dash()
 
 # Connect to the SQLite database
-conn = sqlite3.connect('vid_data.db', check_same_thread=False) # create or connect to the database
-cursor = conn.cursor() # create a cursor object to execute SQL commands
+sql3 = sqlite3.connect('vid_data.db', check_same_thread=False) # create or connect to the database
+cursor = sql3.cursor() # create a cursor object to execute SQL commands
 
 def update_lane_led(value):
+    """
+    update_lane_led
+    """
     if value == "EMPTY":
         return "0", "#FF0000"  # Red for empty
-    else:
-        return value.split(',')[0][5:], "#00FF00"  # Green for valid VID
+    return value.split(',')[0][5:], "#00FF00"  # Green for valid VID
 
 def update_lane_indicator(vid, rfid):
+    """
+    update_lane_indicator
+    """
     if vid != '0' and vid == rfid:
         return "#00FF00", "Match"  # Green for match
-    else:
-        return "#FF0000", "Mismatch"  # Red for mismatch
+    return "#FF0000", "Mismatch"  # Red for mismatch
 
 app.layout = html.Div([
     html.H1("TBG Fuelbay Bus Identification System",
@@ -136,6 +140,8 @@ app.layout = html.Div([
 )
 
 def update_lanes(n_intervals):
+    """
+    """
     vid_1, rfid_1 = read_lane_data(cursor, 1)
     vid_2, rfid_2 = read_lane_data(cursor, 2)
 
@@ -155,3 +161,4 @@ def update_lanes(n_intervals):
 
 if __name__ == '__main__':
     app.run(debug=True)
+#eof

@@ -382,30 +382,28 @@ if __name__ == '__main__':
     threading.Thread(target=serial_read, args=(vid_In,    "VIDRD:",)).start()                                # VID detector thread
 
 
-    """ SQL Commented OUT
-        WAB ToDo
-        What was the intent of the DB ??
 
-        # database initialization
-        conn = sqlite3.connect('vid_data.db', check_same_thread = False)                                        # create or connect to the database
-        # MAKE SURE ONLY THIS SCRIPT WRITES, TO AVOID CONFLICTS
-        cursor = conn.cursor()                                                                                  # create a cursor object to execute SQL commands
+    # database initialization
+    # database is used to share data with the gui
+    sql3 = sqlite3.connect('vid_data.db', check_same_thread = False)                                        # create or connect to the database
+    # MAKE SURE ONLY THIS SCRIPT WRITES, TO AVOID CONFLICTS
+    cursor = sql3.cursor()                                                                                  # create a cursor object to execute SQL commands
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS vid_data (
-                    lane INTEGER PRIMARY KEY,
-                    vid TEXT,
-                    rfid TEXT
-            )
-        ''')                                                                                                    # creates table with limited columns
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS vid_data (
+                lane INTEGER PRIMARY KEY,
+                vid TEXT,
+                rfid TEXT
+        )
+    ''')                                                                                                    # creates table with limited columns
 
-        conn.commit()
+    sql3.commit()
 
-        # initialize a column for each lane
-        for lane in [1, 2]:
-            cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
-        conn.commit()                                                                                           # commit the changes to the database
-    """
+    # initialize a column for each lane
+    for lane in [1, 2]:
+        cursor.execute('INSERT OR IGNORE INTO vid_data (lane, vid, rfid) VALUES (?, ?, ?)', (lane, '', ''))
+    sql3.commit()                                                                                           # commit the changes to the database
+
 
 
     def sendToSerial4(msg):
@@ -522,13 +520,11 @@ if __name__ == '__main__':
                 vidQEmpty = False
 
 
-        """SQL Commented OUT
-            # Update SQL Database
-            ## WAB_?? what use is the SQL put to ?
-            update_lane_data(cursor, 1, vid_L1_Msg, rfid_1_FuelScanMsg)                                     # update lane 1 data in the database
-            update_lane_data(cursor, 2, vid_L2_Msg, rfid_2_FuelScanMsg)                                     # update lane 2 data in the database
-            conn.commit()                                                                                   # commit the changes to the database
-        """
+        #SQL is used to exchange data with the GUI
+        update_lane_data(cursor, 1, vid_L1_Msg, rfid_1_FuelScanMsg)                                     # update lane 1 data in the database
+        update_lane_data(cursor, 2, vid_L2_Msg, rfid_2_FuelScanMsg)                                     # update lane 2 data in the database
+        sql3.commit()                                                                                   # commit the changes to the database
+
 
 
         ###########################
