@@ -136,15 +136,15 @@ if __name__ == '__main__':
     ###########################
     cmdLineParser = argparse.ArgumentParser(description=" Looking back down the fuel lane from the front of the Bus\r\n LEFT Lane is Lane 1\r\n Right Lane is lane 2")
 
-    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="0 disables logging to csv. [1] Enables logging to CSV file")
-    cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="0 NOTSET, [1] DEBUG, 2 INFO, 3 WARNING, 4 ERROR, 5 CRITICAL")
+    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="[0] disables logging to csv. [1] Enables logging to CSV file")
+    cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="[0] NOTSET, [1] DEBUG, [2] INFO, [3] WARNING, [4] ERROR, [5] CRITICAL")
 
     cmdLineParser.add_argument("--emptyLaneMin","-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
 
     cmdLineParser.add_argument("--leftLaneMin", "-l", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 1.")
     cmdLineParser.add_argument("--rightLaneMin","-r", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 2.")
 
-    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] disables forwarding. 1 Enables forwarding")
+    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] disables forwarding. [1] Enables forwarding")
 
     cmdLineArgs = cmdLineParser.parse_args()
 

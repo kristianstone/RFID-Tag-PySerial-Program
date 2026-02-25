@@ -89,11 +89,23 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/pi/rfid
-ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py -s 0  -c 1  -d 1  -e 3  -l 5  -r 5  -s 0
+ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py  -c 1  -d 1  -e 3  -l 5  -r 5  -s 1
+#-c csvLogging          0=disable 1=enable
+#-d debugLevel          0=notset, 1=debug ,2=info, 3=warning, 4=error, 5=critical
+#-e emptyMinimum        count of null reads to declare empty
+#-l leftLane            min consecutitive reads
+#-r rightLane           min consecutive reads
+#-s send2serial         0=disable 1=enable
+
 User=pi
-# Restart the service automatically restart if it crashes
+# Optionally, add Restart options to make the service automatically restart if it crashes
 Restart=on-failure
 RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+
+
 
 [Install]
 WantedBy=multi-user.target
