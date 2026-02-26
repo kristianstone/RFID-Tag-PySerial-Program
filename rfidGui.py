@@ -19,28 +19,30 @@ def update_lane_led(value):
         return "0", "#FF0000"  # Red for empty
     return value.split(',')[0][5:], "#00FF00"  # Green for valid VID
 
+
 def update_lane_indicator(vid, rfid):
     """
     update_lane_indicator
     """
     if vid != '0' and vid == rfid:
-        return "#00FF00", "Match"  # Green for match
-    return "#FF0000", "Mismatch"  # Red for mismatch
+        return "#00FF00", "VID == Tag"  # Green for match
+    return "#FF0000", "VID != Tag"  # Red for mismatch
+
 
 app.layout = html.Div([
-    html.H1("TBG Fuelbay Bus Identification System",
+    html.H1("Fuelbay Bus Identification",
             style={'textAlign': 'center',
                    'fontFamily': 'Arial, sans-serif'} ),
 
     # Lane 1 Divider
     html.Div([
-        html.H2("Lane 1 Data",
+        html.H2("Lane 1",
             style={'textAlign': 'center',
                    'fontFamily': 'Arial, sans-serif'} ),
 
         daq.Indicator(
             id='lane-1-indicator',
-            label="Mismatch", # Match or Mismatch
+            label="VID == Tag", # Match or Mismatch
             color="#FF0000",  # Red for mismatch
             size=30,
             style={'fontFamily': 'Arial, sans-serif',
@@ -49,7 +51,7 @@ app.layout = html.Div([
 
         daq.LEDDisplay(
             id='LED-display-VID1',
-            label="Lane 1 VID",
+            label="VID",
             value="1234",
             color="#FF0000",
             style={'fontFamily': 'Arial, sans-serif',
@@ -74,13 +76,13 @@ app.layout = html.Div([
 
     # Lane 2 Divider
     html.Div([
-        html.H2("Lane 2 Data",
+        html.H2("Lane 2",
             style={'textAlign': 'center',
                    'fontFamily': 'Arial, sans-serif'} ),
 
         daq.Indicator(
             id='lane-2-indicator',
-            label="Mismatch", # Match or Mismatch
+            label="VID == Tag", # Match or Mismatch
             color="#FF0000",  # Red for mismatch
             size=30,
             style={'fontFamily': 'Arial, sans-serif',
@@ -89,7 +91,7 @@ app.layout = html.Div([
 
         daq.LEDDisplay(
             id='LED-display-VID2',
-            label="Lane 2 VID",
+            label="VID",
             value="1234",
             color="#FF0000",
             style={'fontFamily': 'Arial, sans-serif',
@@ -114,31 +116,33 @@ app.layout = html.Div([
 
     dcc.Interval(
         id='interval-component',
-        interval=1*1000,  # in milliseconds
+        interval=5*250,  # in milliseconds
         n_intervals=0
     )
 ])
 
+
 # Update LED displays and indicators
 @callback(
-    Output('LED-display-VID1', 'value'),
-    Output('LED-display-VID1', 'color'),
-    Output('LED-display-VID2', 'value'),
-    Output('LED-display-VID2', 'color'),
-    Output('LED-display-RFID1', 'value'),
-    Output('LED-display-RFID1', 'color'),
-    Output('LED-display-RFID2', 'value'),
-    Output('LED-display-RFID2', 'color'),
-    Output('lane-1-indicator', 'color'),
-    Output('lane-1-indicator', 'label'),
-    Output('lane-2-indicator', 'color'),
-    Output('lane-2-indicator', 'label'),
-    Output('LED-display-VID1', 'label'),
-    Output('LED-display-RFID1', 'label'),
-    Output('LED-display-VID2', 'label'),
-    Output('LED-display-RFID2', 'label'),
-    Input('interval-component', 'n_intervals')
+    Output('LED-display-VID1'   , 'value'),
+    Output('LED-display-VID1'   , 'color'),
+    Output('LED-display-VID2'   , 'value'),
+    Output('LED-display-VID2'   , 'color'),
+    Output('LED-display-RFID1'  , 'value'),
+    Output('LED-display-RFID1'  , 'color'),
+    Output('LED-display-RFID2'  , 'value'),
+    Output('LED-display-RFID2'  , 'color'),
+    Output('lane-1-indicator'   , 'color'),
+    Output('lane-1-indicator'   , 'label'),
+    Output('lane-2-indicator'   , 'color'),
+    Output('lane-2-indicator'   , 'label'),
+    Output('LED-display-VID1'   , 'label'),
+    Output('LED-display-RFID1'  , 'label'),
+    Output('LED-display-VID2'   , 'label'),
+    Output('LED-display-RFID2'  , 'label'),
+    Input('interval-component'  , 'n_intervals')
 )
+
 
 def update_lanes(n_intervals):
     """
@@ -146,7 +150,7 @@ def update_lanes(n_intervals):
     vid_1, rfid_1           = read_lane_data(cursor, 1)
     vid_2, rfid_2           = read_lane_data(cursor, 2)
 
-    vid_1_Val, color        = update_lane_led(vid_1)
+    vid_1_Val, color1       = update_lane_led(vid_1)
     vid_2_Val, color2       = update_lane_led(vid_2)
 
     rfid_1_Val, rfidCol1    = update_lane_led(rfid_1)
@@ -155,10 +159,14 @@ def update_lanes(n_intervals):
     indicator1, label1      = update_lane_indicator(vid_1_Val, rfid_1_Val)
     indicator2, label2      = update_lane_indicator(vid_2_Val, rfid_2_Val)
 
-    return  vid_1_Val,  color,      vid_2_Val,  color2, rfid_1_Val, rfidCol1, \
-            rfid_2_Val, rfidCol2,   indicator1, label1, indicator2, label2, \
-            f"Lane 1 VID: {vid_1}", f"Lane 1 Tag: {rfid_1}", \
-            f"Lane 2 VID: {vid_2}", f"Lane 2 Tag: {rfid_2}"
+    return  vid_1_Val,  color1,                                 \
+            vid_2_Val,  color2,                                 \
+            rfid_1_Val, rfidCol1,                               \
+            rfid_2_Val, rfidCol2,                               \
+            indicator1, label1, indicator2, label2,             \
+            f"VID(1): {vid_1}", f"Tag(1): {rfid_1}",    \
+            f"VID(2): {vid_2}", f"Tag(2): {rfid_2}"
+
 
 if __name__ == '__main__':
 

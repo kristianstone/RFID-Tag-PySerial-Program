@@ -1,5 +1,7 @@
-TailScale is being used to proovide a VPN
-=========================================
+TailScale is being used to provide a VPN
+========================================
+========================================
+
 https://login.tailscale.com/admin/machines
 TailScale Console Admin: blairwa.qld@gmail.com
 TailScale Passwd:   cooperate
@@ -25,6 +27,11 @@ TailScale-ssh may be useful for managing Keys
 https://tailscale.com/tailscale-ssh
 
 
+RealVNC
+=======
+=======
+Not needed  but useful
+---------------------
 RealVNC Admin
 =============
 RealNVC Console Admin: blairwa.qld@gmail.com
@@ -35,6 +42,10 @@ Modem Admin
 NightHawk Console ID:
 NightHawk Passwd: ToowongFMS
 
+
+PYTHON
+======
+======
 
 Move old virtual environment out of the way
 -------------------------------------------
@@ -47,8 +58,8 @@ Create new virtual environment
 
     cd /home/pi/rfid
 
-Install external modules
-------------------------
+Install external modules into python virtual environment
+--------------------------------------------------------
     /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 cysystemd
     /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 pyserial
     /home/pi/rfid/rfidenv/bin/python3 -m pip install --resume-retries 10 revpimodio2
@@ -74,14 +85,17 @@ pip install -r /home/pi/rfid/requirements.txt
 deactivate
 
 
+Systemd Service
+===============
+===============
+
 Set up Service to run the RFID App
 ==================================
 
 Create and Edit the service File
 --------------------------------
     sudo nano /lib/systemd/system/rfid-fuellane-id.service
-<<<
-
+Service<<<
 [Unit]
 Description=FMS RFID Reader for Fuel Lane Id
 After=network.target
@@ -106,10 +120,8 @@ RestartSec=5s
 WantedBy=multi-user.target
 
 
-
 [Install]
 WantedBy=multi-user.target
-
 >>>
 
 Set Permissions on the Service files
@@ -140,6 +152,69 @@ view Status of Service
 Disable Service
 --------------
     sudo systemctl disable rfid-fuellane-id.service
+
+
+Service to run and restart Gui
+=============================
+Service<<<
+[Unit]
+Description=FMS RFID Diagnostic GUI
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/rfid
+ExecStart=/home/pi/rfid/rfidenv/bin/python3 -u  /home/pi/rfid/rfidGui.py
+User=pi
+# Optionally, add Restart options to make the service automatically restart if it crashes
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+>>>
+
+Timer and Service to collect fleet_list
+======================================
+Service<<<
+[Unit]
+Description=Retrieve FleetList from Host
+After=network.target
+
+[Service]
+Type=oneshot
+# ExecStart=/usr/bin/scp fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/fleet_list.csv
+ExecStart=/home/pi/rfid/getFleetList.sh
+# migrate to a script to check if changed
+# ie check a sha1Sum
+# Alternatively, for syncing:
+# ExecStart=/usr/bin/rsync -avz user@remote-server:/path/to/remote/file /local/destination/path/
+User=pi
+>>>
+
+Timer<<<
+[Unit]
+Description=Retrieve FleetList from Host every 1hr
+
+[Timer]
+# Run 5 minutes after boot
+OnBootSec=5min
+# Run every 1 hour thereafter
+OnUnitActiveSec=1h
+Unit=rfid-getFleetList.service
+
+[Install]
+WantedBy=timers.target
+>>>
+
+Activate File Retrieval
+-----------------------
+sudo systemctl daemon-reload
+sudo systemctl enable --now rfid-getFleetList.timer
+run now
+-------
+sudo systemctl start rfid-getFleetList.service
+
 
 
 Journal Use and Configuration
@@ -226,17 +301,11 @@ sudo apt-get install xz-utils
 
 
 Push or Pull files from server to Pi
-------------------------------------
+====================================
+====================================
 
-systemd service
-systemd timer
+see getFleetList.sh
 
-rsync -avz --contimeout=10  username@remote_server:/path/to/source/file_or_directory    /path/to/local/destination/
-scp                         username@remote_server:/path/to/source/file                 /path/to/local/destination/
-
- scp fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/test.csv
- mv /home/pi/rfid/test.csv /home/pi/rfid/TEST.CSV
- sudo chmod 644 /home/pi/rfid/TEST.CSV
 
 
 Setup SSHD on Windoze11
@@ -274,64 +343,19 @@ Comment out thises lines from C:\ProgramData\ssh\sshd_config
 # Match Group administrators
 #     AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
 
-
-
 icacls.exe administrators_authorized_keys
 icacls.exe administrators_authorized_keys /inheritance:r
 icacls.exe administrators_authorized_keys /grant SYSTEM:F
 icacls.exe administrators_authorized_keys /grant Administrators:F
 
-
 New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
 
 
+add linux to powershell
+=======================
+=======================
 
-
-
-
-
-add sha1sum to powershell
--------------------------
 powershell wsl --install
 
 sha1sum fleet_list.csv > fleet_list.host.sha1
 
-
-rfid-getFleetList.service
-----------------------
-[Unit]
-Description=Retrieve FleetList from Host
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/scp fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/test.csv
-# migrate to a script to check if changed
-# ie check a sha1Sum
-# Alternatively, for syncing:
-# ExecStart=/usr/bin/rsync -avz user@remote-server:/path/to/remote/file /local/destination/path/
-User=pi
-
-rfid-getFleetList.timer
---------------------
-[Unit]
-Description=Retrieve FleetList from Host every 1hr
-
-[Timer]
-# Run 5 minutes after boot
-OnBootSec=5min
-# Run every 1 hour thereafter
-OnUnitActiveSec=3h
-Unit=rfid-getFleetList.service
-
-[Install]
-WantedBy=timers.target
-
-
-Activate File Retrieval
------------------------
-sudo systemctl daemon-reload
-sudo systemctl enable --now rfid-getFleetList.timer
-run now
--------
-sudo systemctl start rfid-getFleetList.service
