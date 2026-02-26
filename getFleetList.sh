@@ -1,12 +1,18 @@
 #!/usr/bin/bash
 # -vx
 # bash script to collect the current version of fleet_list.csv
+echo "Fleet List Update Started"
 echo "Generate sha1 of local fleet_list.csv"
 /usr/bin/sha1sum /home/pi/rfid/fleet_list.csv > /home/pi/rfid/fleet_list.local.sha1
 
 echo "Get sha1 of the hosts fleet_list.csv"
 /usr/bin/rm /home/pi/rfid/fleet_list.host.sha1
 /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.host.sha1  /home/pi/rfid/fleet_list.host.sha1
+# if fail to copy host sha1 exit
+if [ $? -ne 0 ]; then
+    echo "Failed to SCP SHA1 of the new Fleet List"
+    exit 1
+fi
 
 FILE1=/home/pi/rfid/fleet_list.host.sha1
 FILE2=/home/pi/rfid/fleet_list.local.sha1
@@ -22,10 +28,18 @@ WORD2=$(head -n 1 "$FILE2" | cut -d ' ' -f 1)
 if [[ "$WORD1" == "$WORD2" ]]; then
     echo "Fleet List unchanged. $WORD1"
 else
-    echo "Update Fleet List! $WORD1 vs $WORD2"
+    echo "Update Fleet List! Local:<$WORD1> vs Host:<$WORD2>"
     /usr/bin/cp /home/pi/rfid/fleet_list.csv /home/pi/rfid/"fleet_list_$(date +%Y-%m-%d_%H).csv" || true
-    /usr/bin/cat /home/pi/rfid/fleet_list.csv > /home/pi/rfid/fleet_list.csv
-    /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/fleet_list.csv
+    /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/fleet_list.csv.new
+    # if fail to get new csv file exit
+    if [ $? -ne 0 ]; then
+        echo "Failed to SCP the new Fleet List"
+        exit 2
+    else
+        /usr/bin/cat /home/pi/rfid/fleet_list.csv.new > /home/pi/rfid/fleet_list.csv
+    fi
 fi
+echo "Fleet List Update Complete"
+#eof
 
 

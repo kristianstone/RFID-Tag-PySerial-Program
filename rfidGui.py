@@ -2,6 +2,7 @@ from dash import Dash, html, dcc, callback, Output, Input
 import dash_daq as daq
 from rfidUtil import read_lane_data
 import sqlite3
+import subprocess
 
 # Initialize the Dash app
 app = Dash()
@@ -160,5 +161,16 @@ def update_lanes(n_intervals):
             f"Lane 2 VID: {vid_2}", f"Lane 2 Tag: {rfid_2}"
 
 if __name__ == '__main__':
-    app.run(debug=True)
+
+    vpnIP = '127.0.0.1' # default is local network
+    result = subprocess.run(['tailscale', 'ip', '-4'], capture_output=True, text=True)
+
+    if result.returncode == 0:
+        vpnIP = result.stdout[:-1]
+        print(f"VPN IP is: <{vpnIP}>")
+
+    print(f"RFID GUI running on: <{vpnIP}>")
+
+    app.run(debug=True, host=vpnIP, port=8050)
+
 #eof
