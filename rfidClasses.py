@@ -108,6 +108,7 @@ class Reader:
         Args:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
         """
+
         self.fleetNumber = "Tag Unknown" # default not registered
 
         if ((self.tagNumber[0] == 'N') or (self.tagNumber[0] == 'n')) :
@@ -116,5 +117,7 @@ class Reader:
                 for x in csv.reader(file):
                     if str(int(tagNum)) == str(x[1]): # checks if it exists in the list
                         self.fleetNumber = x[0] # update the fleet number
+        else :
+            print ("Tag does not start with N|n")
 
         return self.fleetNumber

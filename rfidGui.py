@@ -1,15 +1,17 @@
 from dash import Dash, html, dcc, callback, Output, Input
 import dash_daq as daq
-from rfidUtil import read_lane_data
+import rfidGuiUtil
 import sqlite3
 import subprocess
+
+
 
 # Initialize the Dash app
 app = Dash()
 
 # Connect to the SQLite database
-sql3 = sqlite3.connect('vid_data.db', check_same_thread=False) # create or connect to the database
-cursor = sql3.cursor() # create a cursor object to execute SQL commands
+sql3Conn = sqlite3.connect('vid_data.db', check_same_thread=False) # create or connect to the database
+sql3Cursor = sql3Conn.cursor() # create a cursor object to execute SQL commands
 
 def update_lane_led(value):
     """
@@ -30,7 +32,7 @@ def update_lane_indicator(vid, rfid):
 
 
 app.layout = html.Div([
-    html.H1("Fuelbay Bus Identification",
+    html.H1("Fuelbay Bus Identification ",
             style={'textAlign': 'center',
                    'fontFamily': 'Arial, sans-serif'} ),
 
@@ -147,8 +149,8 @@ app.layout = html.Div([
 def update_lanes(n_intervals):
     """
     """
-    vid_1, rfid_1           = read_lane_data(cursor, 1)
-    vid_2, rfid_2           = read_lane_data(cursor, 2)
+    vid_1, rfid_1           = read_lane_data(sql3Cursor, 1)
+    vid_2, rfid_2           = read_lane_data(sql3Cursor, 2)
 
     vid_1_Val, color1       = update_lane_led(vid_1)
     vid_2_Val, color2       = update_lane_led(vid_2)

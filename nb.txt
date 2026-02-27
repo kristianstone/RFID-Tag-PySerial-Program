@@ -111,6 +111,8 @@ ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py  -c 1 
 #-r rightLane           min consecutive reads
 #-s send2serial         0=disable 1=enable
 
+ExecStopPost=/bin/systemctl restart rfid-fuellane-gui.service
+
 User=pi
 # Optionally, add Restart options to make the service automatically restart if it crashes
 Restart=on-failure
