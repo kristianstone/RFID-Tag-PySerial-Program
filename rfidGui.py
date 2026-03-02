@@ -1,6 +1,5 @@
 from dash import Dash, html, dcc, callback, Output, Input
 import dash_daq as daq
-import rfidGuiUtil
 import sqlite3
 import subprocess
 
