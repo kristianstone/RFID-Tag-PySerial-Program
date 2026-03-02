@@ -473,7 +473,7 @@ if __name__ == '__main__':
             else :
                 rfid_1_NullPolls += 1
                 rfid_1_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_1_FuelScanMsg = "L1-" + MSG_POLLING + '-' + str(rfid_1_NullPolls)
+                rfid_1_FuelScanMsg = "1-" + MSG_POLLING + '-' + str(rfid_1_NullPolls)
                 log2journal.debug("<%s>", repr(rfid_1_FuelScanMsg))                                              # increment the empty counter for RFID reader 1
         else :
             rfid_1_NullPolls = 0                                                                                # reset empty counter if queue is not empty
@@ -501,7 +501,7 @@ if __name__ == '__main__':
             else :
                 rfid_2_NullPolls += 1
                 rfid_2_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_2_FuelScanMsg = "L2-"+MSG_POLLING + '-' + str(rfid_2_NullPolls)
+                rfid_2_FuelScanMsg = "2-" + MSG_POLLING + '-' + str(rfid_2_NullPolls)
                 log2journal.debug("<%s>", repr(rfid_2_FuelScanMsg))
         else :
             rfid_2_NullPolls = 0
