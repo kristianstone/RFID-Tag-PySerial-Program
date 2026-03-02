@@ -218,9 +218,13 @@ def sendToSerial4(msg):
     :param msg: Description
     """
     # ToDo could do another last minute check to only allow WellFormatted msgs out
-    if(True is SEND_TO_SERIAL_4):
-        log2journal.debug("Serial OUT:<%s>", repr(msg))
-        plc_Out.write(msg.encode('utf-8'))
+
+    if ( STD_MSG_LEN == len(msg) ):
+        if(True is SEND_TO_SERIAL_4):
+            log2journal.debug("Serial OUT:<%s>", repr(msg))
+            plc_Out.write(msg.encode('utf-8'))
+    else:
+            log2journal.error("<%s> has <%d> characters. Expect <%d>", repr(msg), len(msg), STD_MSG_LEN)
 
 
 
@@ -571,7 +575,7 @@ if __name__ == '__main__':
             log2journal.debug("%s : <%s>", tagsIn, repr(rfid_1_FuelScanMsg))
             log2CSV(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, vid_1_MatchesRfid1, tagsIn)
 
-            if((MSG_POLLING != rfid_1_FuelScanMsg) and (MSG_EMPTY != rfid_1_FuelScanMsg)):
+            if((MSG_POLLING not in rfid_1_FuelScanMsg) and (MSG_EMPTY not in rfid_1_FuelScanMsg)):
                 sendToSerial4(rfid_1_FuelScanMsg)
 
         # record regardless of RFID, but only if VID is in scope
@@ -609,7 +613,7 @@ if __name__ == '__main__':
             log2journal.debug("%s : <%s>", tagsIn, repr(rfid_2_FuelScanMsg))
             log2CSV(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, vid_2_MatchesRfid2, tagsIn)
 
-            if((MSG_POLLING != rfid_2_FuelScanMsg) and (MSG_EMPTY != rfid_2_FuelScanMsg)):
+            if((MSG_POLLING not in rfid_2_FuelScanMsg) and (MSG_EMPTY not in rfid_2_FuelScanMsg)):
                 sendToSerial4(rfid_2_FuelScanMsg)
 
         # record regardless of RFID, but only if VID is in scope
