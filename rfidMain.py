@@ -173,12 +173,12 @@ def log2CSV( when, msgOrigin, vidMsg, tagMsg, tagNum, prevTagNum, seqNum, nullPo
 
     msgT    = repr(tagMsg)
     msgTlen = len(msgT)
-    battery = batteryStatus(tagNum)
+    battStat = batteryStatus(tagNum)
 
     if(msgVlen == STD_MSG_LEN):
-        log2journal.info("CSV %s,%s,%d,%s,<%d>,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
+        log2journal.info(   "CSV [%s,VID,%s,<%d>,TAG,%s,<%d>,%s,<%s>,<%s>,%s,%s,%s,%s]", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battStat,vidMatchesTag,tagCntInLane)
     else :
-        log2journal.warning("CSV %s,%s,%d,%s,<%d>,%s,%s,%s,%s,%s,%s,%s", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battery,vidMatchesTag,tagCntInLane)
+        log2journal.warning("CSV [%s,VID,%s,<%d>,TAG,%s,<%d>,%s,<%d>,<%d>,%s,%s,%s,%s]", msgOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battStat,vidMatchesTag,tagCntInLane)
 
     # create headers for csv file
     write_header = (not (os.path.exists(CSV_LOG_FILE)) or (os.stat(CSV_LOG_FILE).st_size == 0))
@@ -200,7 +200,7 @@ def log2CSV( when, msgOrigin, vidMsg, tagMsg, tagNum, prevTagNum, seqNum, nullPo
                 'TagSeqNum'         : seqNum,
                 'NullPolls'         : nullPolls,
                 'PrevTagNum'        : prevTagNum,
-                'BatteryStatus'     : battery,
+                'BatteryStatus'     : battStat,
                 'VIDmatchsTag'      : vidMatchesTag,
                 'TagsInLane'        : tagCntInLane
             })
@@ -355,8 +355,6 @@ if __name__ == '__main__':
     if (1 == cmdLineArgs.monitorUPS):
         MONITOR_UPS = True
 
-
-
     if (0 == cmdLineArgs.debugLevel):
         log2journal.setLevel(logging.NOTSET)
     elif (1 == cmdLineArgs.debugLevel):
@@ -485,7 +483,7 @@ if __name__ == '__main__':
                 rfid_1_NullPolls += 1
                 rfid_1_Reader.update_tag(MSG_POLLING, Q_POLLING)
                 rfid_1_FuelScanMsg = "1-" + MSG_POLLING + '-' + str(rfid_1_NullPolls)
-                log2journal.debug("L1 Poll:<%s>", repr(rfid_1_FuelScanMsg))                                              # increment the empty counter for RFID reader 1
+                log2journal.debug("L1_Poll:<%s>", repr(rfid_1_FuelScanMsg))                                              # increment the empty counter for RFID reader 1
         else :
             rfid_1_NullPolls = 0                                                                                # reset empty counter if queue is not empty
             rfid_1_Reader.update_tag(rfid_1_Queue.get(True), Q_READY)
@@ -497,7 +495,7 @@ if __name__ == '__main__':
                 rfid_1_SequentialReads = 1                                                                      # reset the counter to 1 if different tag is read
 
             rfid_1_PrevFuelScanMsg = rfid_1_FuelScanMsg                                                         # update previous RFID for lane 1
-            log2journal.debug("L1_RFID_Q Read:<%s><%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_Reader.get_tag() ,rfid_1_SequentialReads)     # log the current RFID
+            log2journal.debug("L1_RFID_DQ:<%s><%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_Reader.get_tag() ,rfid_1_SequentialReads)     # log the current RFID
 
         ##########################
         # Process the RFID 1 Queue
@@ -524,7 +522,7 @@ if __name__ == '__main__':
                 rfid_2_SequentialReads = 1
 
             rfid_2_PrevFuelScanMsg = rfid_2_FuelScanMsg                                                                                 # update previous RFID for lane 2
-            log2journal.debug("L2_RFID_Q Read:<%s><%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_Reader.get_tag() ,rfid_2_SequentialReads)# repr to show escape characters like \n
+            log2journal.debug("L2_RFID_DQ:<%s><%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_Reader.get_tag() ,rfid_2_SequentialReads)# repr to show escape characters like \n
 
 
         ##########################
@@ -585,7 +583,7 @@ if __name__ == '__main__':
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]):                             # Flag if the RFID is seen in both lanes
                 tagsIn = "L1_2TAG"
 
-            log2journal.debug("%s:<%s>", tagsIn, repr(rfid_1_FuelScanMsg))
+            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfid_1_FuelScanMsg), repr(rfid_1_FuelScanMsg))
             log2CSV(now, 'L1_RFID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, vid_1_MatchesRfid1, tagsIn)
             sendToSerial4("L1T", rfid_1_FuelScanMsg)
 
@@ -620,7 +618,7 @@ if __name__ == '__main__':
             if(rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]) :                            # Flag if the RFID is seen in both lanes
                 tagsIn = "L2_2TAG"
 
-            log2journal.debug("%s:<%s>", tagsIn, repr(rfid_2_FuelScanMsg))
+            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfid_1_FuelScanMsg), repr(rfid_2_FuelScanMsg))
             log2CSV(now, 'L2_RFID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, vid_2_MatchesRfid2, tagsIn)
             sendToSerial4("L2T", rfid_2_FuelScanMsg)
 
