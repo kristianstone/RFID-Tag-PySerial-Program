@@ -307,6 +307,7 @@ if __name__ == '__main__':
     LANE_2_MIN:         int     = 5                         # required read count for RFID reader
     LOG_TO_CSV:         bool    = True
     SEND_TO_SERIAL_4:   bool    = False
+    MONITOR_UPS:        bool    = False
 
     rfid_1_FuelScanMsg:         str = MSG_EMPTY
     rfid_1_PrevFuelScanMsg:     str = MSG_INIT                      # initial RFID for lane 1
@@ -327,7 +328,7 @@ if __name__ == '__main__':
     ###########################
     cmdLineParser = argparse.ArgumentParser(description=" Looking back down the fuel lane from the front of the Bus\r\n LEFT Lane is Lane 1\r\n Right Lane is lane 2")
 
-    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="[0] disables logging to csv. [1] Enables logging to CSV file")
+    cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="[0] Disables logging to csv. [1] Enables logging to CSV file")
     cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="[0] NOTSET, [1] DEBUG, [2] INFO, [3] WARNING, [4] ERROR, [5] CRITICAL")
 
     cmdLineParser.add_argument("--emptyLaneMin","-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
@@ -335,7 +336,9 @@ if __name__ == '__main__':
     cmdLineParser.add_argument("--leftLaneMin", "-l", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 1.")
     cmdLineParser.add_argument("--rightLaneMin","-r", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 2.")
 
-    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] disables forwarding. [1] Enables forwarding")
+    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] Disables forwarding. [1] Enables forwarding")
+
+    cmdLineParser.add_argument("--monitorUPS","-u",   type=int, default=0, help="[0] Disables UPS monitor. [1] Enables UPS Monitor")
 
     cmdLineArgs = cmdLineParser.parse_args()
 
@@ -348,6 +351,11 @@ if __name__ == '__main__':
 
     if (1 == cmdLineArgs.fwdViaSerial):
         SEND_TO_SERIAL_4 = True
+
+    if (1 == cmdLineArgs.monitorUPS):
+        MONITOR_UPS = True
+
+
 
     if (0 == cmdLineArgs.debugLevel):
         log2journal.setLevel(logging.NOTSET)
@@ -366,7 +374,7 @@ if __name__ == '__main__':
 
     log2journal.info("Parameters:<-l[x]>LeftLaneMin=%d       <-l[x]>RightLaneMin=%d       <-e[x]>EmptyMin=%d"     , LANE_1_MIN, LANE_2_MIN,       LANE_EMPTY_MIN)
     log2journal.info("Parameters:<-c[0,1]>RecordToCSV=%s  <-s[0,1]>SendToSerial=%s <-l[1,2,3,4,5]>LogLevel=(%d)0"    , LOG_TO_CSV, SEND_TO_SERIAL_4, cmdLineArgs.debugLevel)
-
+    log2journal.info("Parameters:<-u[0,1]>MonitorUPS=%s ", MONITOR_UPS)
 
     ###########################
     ### Serial Port Allocations
@@ -407,7 +415,8 @@ if __name__ == '__main__':
     #####################
     # UPS Shutdown Thread
     #####################
-    threading.Thread(target=shutdown_countdown_func).start()
+    if (True == MONITOR_UPS):
+        threading.Thread(target=shutdown_countdown_func).start()
 
     ###################################################
     # creating each thread to receive data from readers
