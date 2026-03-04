@@ -562,8 +562,9 @@ if __name__ == '__main__':
             rfid_2_PrevFuelScanMsg = rfid_2_FuelScanMsg                                                                                 # update previous RFID for lane 2
             log2journal.debug("L2_RFID_DQ:<%s><%d><%s>", rfid_2_Reader.get_tag(), rfid_2_SequentialReads, repr(rfid_2_FuelScanMsg))# repr to show escape characters like \n
 
+        # log the Tag being detected in both lanes.
         if(rfid_2_Reader.get_tag() == rfid_1_Reader.get_tag()):
-            log2journal.error("TAG 1:<%s>2:<%s> in BOTH LANES", rfid_1_Reader.get_tag(), rfid_2_Reader.get_tag())
+            log2journal.warning("TAG 1:<%s>2:<%s> in BOTH LANES", rfid_1_Reader.get_tag(), rfid_2_Reader.get_tag())
 
 
 
