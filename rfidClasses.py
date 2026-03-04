@@ -55,12 +55,18 @@ class Reader:
         """
         Returns the string of the RFID tag/ VID Tag currently being detected
         """
-        ## WAB strip off trailing unprintable
         s = self.tagNumber
-        index = self.find_first_unprintable(s)
+        ## WAB strip off trailing unprintable
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
+        index = self.find_first_unprintable(s)
         return self.tagNumber[:index]
 
+    # get tag
+    def is_tag_valid(self) -> bool :
+        """
+        Returns the string of the RFID tag/ VID Tag currently being detected
+        """
+        return self.tagValid
 
     # get tag
     def get_last_tag(self) -> str:
@@ -70,7 +76,6 @@ class Reader:
         ## WAB strip off trailing unprintable
         s = self.lastTagNumber
         index = self.find_first_unprintable(s)
-        ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         return self.lastTagNumber[:index]
 
 

@@ -511,7 +511,7 @@ if __name__ == '__main__':
         if rfid_1_Queue.empty():
             if (rfid_1_NullPolls > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
                 if (rfid_1_SequentialReads != 0) :
-                    log2journal.debug("L1_Empty:<%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_SequentialReads)
+                    log2journal.debug("L1_Q_Empty:<%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_SequentialReads)
                     rfid_1_SequentialReads = 0
                     rfid_1_Reader.update_tag(MSG_EMPTY, Q_EMPTY)
                     rfid_1_FuelScanMsg = MSG_EMPTY
@@ -541,7 +541,7 @@ if __name__ == '__main__':
         if rfid_2_Queue.empty() :
             if (rfid_2_NullPolls > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
                 if (rfid_2_SequentialReads != 0) :
-                    log2journal.debug("L2_Empty:<%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_SequentialReads)
+                    log2journal.debug("L2_Q_Empty:<%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_SequentialReads)
                     rfid_2_SequentialReads = 0
                     rfid_2_Reader.update_tag(MSG_EMPTY, Q_EMPTY)
                     rfid_2_FuelScanMsg = MSG_EMPTY
@@ -563,8 +563,9 @@ if __name__ == '__main__':
             log2journal.debug("L2_RFID_DQ:<%s><%d><%s>", rfid_2_Reader.get_tag(), rfid_2_SequentialReads, repr(rfid_2_FuelScanMsg))# repr to show escape characters like \n
 
         # log the Tag being detected in both lanes.
-        if(rfid_2_Reader.get_tag() == rfid_1_Reader.get_tag()):
-            log2journal.warning("TAG 1:<%s>2:<%s> in BOTH LANES", rfid_1_Reader.get_tag(), rfid_2_Reader.get_tag())
+        if((rfid_1_Reader.is_tag_valid()) and (rfid_2_Reader.is_tag_valid())):
+            if(rfid_2_Reader.get_tag() == rfid_1_Reader.get_tag()):
+                log2journal.warning("TAG 1:<%s>2:<%s> in BOTH LANES", rfid_1_Reader.get_tag(), rfid_2_Reader.get_tag())
 
 
 
