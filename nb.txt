@@ -361,3 +361,8 @@ powershell wsl --install
 
 sha1sum fleet_list.csv > fleet_list.host.sha1
 
+
+To serial connect to the Reader
+===============================
+ picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity n --databits 8 /dev/ttyUSB0
+ picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity n --databits 8 /dev/ttyUSB1

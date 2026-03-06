@@ -30,9 +30,13 @@ class Reader:
         """
         self.tagNumber      = tagNumber     # instance attribute
         self.lastTagNumber  = tagNumber
-        self.qStatus        = Q_EMPTY
+        self.qStatus        :int = Q_EMPTY
+        self.sequentialReads:int = 1
+        self.nullPolls      :int = 0
         self.tagValid       = False
         self.fleetNumber    = "TagUnknown"
+        self.fuelScanMsg    :str = MSG_EMPTY
+        self.prevFuelScanMsg:str = MSG_INIT                      # initial RFID for lane 1
 
 
     # get status - not required but will leave for video testing
@@ -60,6 +64,47 @@ class Reader:
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
         index = self.find_first_unprintable(s)
         return self.tagNumber[:index]
+
+
+    def clearSequentialReads(self) :
+        self.sequentialReads = 0
+
+    def incSequentialReads(self) :
+        self.sequentialReads += 1
+
+    def setSequentialReads(self, value:int) :
+        self.sequentialReads = value
+
+    def getSequentialReads(self) -> int :
+        return self.sequentialReads
+
+
+    def clearNullPolls(self) :
+        self.nullPolls = 0
+
+    def incNullPolls(self) :
+        self.nullPolls += 1
+
+    def setNullPolls(self, value:int) :
+        self.nullPolls = value
+
+    def getNullPolls(self) -> int:
+        return self.nullPolls
+
+
+    def setFuelScanMsg(self, value:str) :
+        self.fuelScanMsg = value
+
+    def getFuelScanMsg(self) -> str:
+        return self.fuelScanMsg
+
+
+    def setPrevFuelScanMsg(self, value:str) :
+        self.prevFuelScanMsg = value
+
+    def getPrevFuelScanMsg(self) -> str:
+        return self.prevFuelScanMsg
+
 
     # get tag
     def is_tag_valid(self) -> bool :
@@ -96,6 +141,8 @@ class Reader:
             self.tagValid = False
 
         self.tagNumber = newTag
+        self.status = qStatus
+
         return self.tagValid
 
 

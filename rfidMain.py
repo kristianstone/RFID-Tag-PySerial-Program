@@ -312,10 +312,10 @@ if __name__ == '__main__':
     # VID values
     ############
     vid_L1_Msg:                 str = MSG_EMPTY
-    vid_L1_MsgsReadFromQ:       int = 0
+    vid_L1_cntReadFromQ:       int = 0
 
     vid_L2_Msg:                 str = MSG_EMPTY
-    vid_L2_MsgsReadFromQ:       int = 0
+    vid_L2_cntReadFromQ:       int = 0
 
     vidsListSize:               int = 0
     vidQueue:       queue.Queue[str]  = queue.Queue()       # queue for VID detector
@@ -332,19 +332,12 @@ if __name__ == '__main__':
     SEND_TO_SERIAL_4:   bool    = False
     MONITOR_UPS:        bool    = False
 
-    rfid_1_FuelScanMsg:         str = MSG_EMPTY
-    rfid_1_PrevFuelScanMsg:     str = MSG_INIT                      # initial RFID for lane 1
-    rfid_1_SequentialReads:     int = 1                             # counter for RFID reader 1
-    rfid_1_NullPolls:           int = 0                             # counter for empty reads on RFID reader 1
-    rfid_1_Queue:               queue.Queue[str]  = queue.Queue()   # queue for reader 1
-    rfid_1_Reader:              Reader = Reader(MSG_EMPTY)          # initalize first reader
+    rfid_1_Queue:              queue.Queue[str]  = queue.Queue()   # queue for reader 1
+    rfidReader_1:              Reader = Reader(MSG_EMPTY)          # initalize first reader
 
-    rfid_2_FuelScanMsg:         str = MSG_EMPTY
-    rfid_2_PrevFuelScanMsg:     str = MSG_INIT                      # initial previous RFID for lane 2
-    rfid_2_SequentialReads:     int = 1                             # counter for RFID reader 2
-    rfid_2_NullPolls:           int = 0                             # counter for empty reads on RFID reader 2
-    rfid_2_Queue:               queue.Queue[str]  = queue.Queue()   # queue for reader 2
-    rfid_2_Reader:              Reader = Reader(MSG_EMPTY)          # second reader
+    rfid_2_Queue:              queue.Queue[str]  = queue.Queue()   # queue for reader 2
+    rfidReader_2:              Reader = Reader(MSG_EMPTY)          # second reader
+
 
 
 
@@ -406,7 +399,7 @@ if __name__ == '__main__':
     ###########################
     #connect reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
     try:
-        rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600)                                             #open serial port default 8N1
+        rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                             #open serial port default 8N1
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: reader 1: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
@@ -414,7 +407,7 @@ if __name__ == '__main__':
 
     # connect reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
     try:
-        rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600)                                             #open serial port default 8N1
+        rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                             #open serial port default 8N1
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: reader 2: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
@@ -422,7 +415,7 @@ if __name__ == '__main__':
 
     # connect VID detector input - port 3 - /dev/ttyUSB2 on Linux
     try:
-        vid_In = serial.Serial('/dev/ttyUSB2', baudrate=9600)
+        vid_In = serial.Serial('/dev/ttyUSB2', baudrate=9600, bytesize=8, parity="N", stopbits=1)
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: VID detector: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
@@ -430,7 +423,7 @@ if __name__ == '__main__':
 
     # connect output serial port - port 4 - /dev/ttyUSB3 on linux
     try:
-        plc_Out = serial.Serial('/dev/ttyUSB3', baudrate=9600)
+        plc_Out = serial.Serial('/dev/ttyUSB3', baudrate=9600, bytesize=8, parity="N", stopbits=1)
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: output: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
@@ -509,29 +502,28 @@ if __name__ == '__main__':
         # Process the RFID 1 Queue
         ##########################
         if rfid_1_Queue.empty():
-            if (rfid_1_NullPolls > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
-                if (rfid_1_SequentialReads != 0) :
-                    log2journal.debug("L1_Q_Empty:<%s><%d>", repr(rfid_1_FuelScanMsg), rfid_1_SequentialReads)
-                    rfid_1_SequentialReads = 0
-                    rfid_1_Reader.update_tag(MSG_EMPTY, Q_EMPTY)
-                    rfid_1_FuelScanMsg = MSG_EMPTY
+            if (rfidReader_1.getNullPolls() > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
+                if (rfidReader_1.getSequentialReads() != 0) :
+                    log2journal.debug("L1_Q_Empty:<%s><%d>", repr(rfidReader_1.getFuelScanMsg()), rfidReader_1.getSequentialReads())
+                    rfidReader_1.clearSequentialReads()
+                    rfidReader_1.update_tag(MSG_EMPTY, Q_EMPTY)
+                    rfidReader_1.setFuelScanMsg(MSG_EMPTY)
             else :
-                rfid_1_NullPolls += 1
-                rfid_1_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_1_FuelScanMsg = "1-" + MSG_POLLING + '-' + str(rfid_1_NullPolls)
-                log2journal.debug("L1_Poll:<%s>", repr(rfid_1_FuelScanMsg))                                              # increment the empty counter for RFID reader 1
+                rfidReader_1.incNullPolls()
+                rfidReader_1.update_tag(MSG_POLLING, Q_POLLING)
+                rfidReader_1.setFuelScanMsg( "1-" + MSG_POLLING + '-' + str(rfidReader_1.getNullPolls()))
+                log2journal.debug("L1_Poll:<%s>", repr(rfidReader_1.getFuelScanMsg()))                                              # increment the empty counter for RFID reader 1
         else :
-            rfid_1_NullPolls = 0                                                                                # reset empty counter if queue is not empty
-            rfid_1_Reader.update_tag(rfid_1_Queue.get(True), Q_READY)
-            # conversion to the proper string, look up table handled inside of reader class
-            rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n' # VID 800 outputs \r\n in the msg
-            rfid_1_SequentialReads += 1
+            rfidReader_1.clearNullPolls()                                                                                # reset empty counter if queue is not empty
+            rfidReader_1.update_tag(rfid_1_Queue.get(True), Q_READY)
+            rfidReader_1.setFuelScanMsg("1-BBT" + rfidReader_1.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n') # VID 800 outputs \r\n in the msg
+            rfidReader_1.incSequentialReads()
 
-            if rfid_1_FuelScanMsg != rfid_1_PrevFuelScanMsg:
-                rfid_1_SequentialReads = 1                                                                      # reset the counter to 1 if different tag is read
+            if (rfidReader_1.getFuelScanMsg() != rfidReader_1.getPrevFuelScanMsg()):
+                rfidReader_1.setSequentialReads(1)                                                                      # reset the counter to 1 if different tag is read
 
-            rfid_1_PrevFuelScanMsg = rfid_1_FuelScanMsg                                                         # update previous RFID for lane 1
-            log2journal.debug("L1_TAG_DQ:<%s><%d><%s>",rfid_1_Reader.get_tag(), rfid_1_SequentialReads, repr(rfid_1_FuelScanMsg))     # log the current RFID
+            rfidReader_1.setPrevFuelScanMsg(rfidReader_1.getFuelScanMsg())                                                        # update previous RFID for lane 1
+            log2journal.debug("L1_TAG_DQ:<%s><%d><%s>",rfidReader_1.get_tag(), rfidReader_1.getSequentialReads(), repr(rfidReader_1.getFuelScanMsg()))     # log the current RFID
 
 
 
@@ -539,33 +531,33 @@ if __name__ == '__main__':
         # Process the RFID 1 Queue
         ##########################
         if rfid_2_Queue.empty() :
-            if (rfid_2_NullPolls > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
-                if (rfid_2_SequentialReads != 0) :
-                    log2journal.debug("L2_Q_Empty:<%s><%d>", repr(rfid_2_FuelScanMsg), rfid_2_SequentialReads)
-                    rfid_2_SequentialReads = 0
-                    rfid_2_Reader.update_tag(MSG_EMPTY, Q_EMPTY)
-                    rfid_2_FuelScanMsg = MSG_EMPTY
+            if (rfidReader_2.getNullPolls() > LANE_EMPTY_MIN) :                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
+                if (rfidReader_2.getSequentialReads() != 0) :
+                    log2journal.debug("L2_Q_Empty:<%s><%d>", repr(rfidReader_2.getFuelScanMsg()), rfidReader_2.getSequentialReads())
+                    rfidReader_2.clearSequentialReads()
+                    rfidReader_2.update_tag(MSG_EMPTY, Q_EMPTY)
+                    rfidReader_2.setFuelScanMsg( MSG_EMPTY)
             else :
-                rfid_2_NullPolls += 1
-                rfid_2_Reader.update_tag(MSG_POLLING, Q_POLLING)
-                rfid_2_FuelScanMsg = "2-" + MSG_POLLING + '-' + str(rfid_2_NullPolls)
-                log2journal.debug("L2_Poll:<%s>", repr(rfid_2_FuelScanMsg))
+                rfidReader_2.incNullPolls()
+                rfidReader_2.update_tag(MSG_POLLING, Q_POLLING)
+                rfidReader_2.setFuelScanMsg( "2-" + MSG_POLLING + '-' + str(rfidReader_2.getNullPolls()))
+                log2journal.debug("L2_Poll:<%s>", repr(rfidReader_2.getFuelScanMsg()))
         else :
-            rfid_2_NullPolls = 0
-            rfid_2_Reader.update_tag(rfid_2_Queue.get(True), Q_READY)
-            rfid_2_FuelScanMsg = "2-BBT" + rfid_2_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n' # VID 800 outputs \r\n in the msg
-            rfid_2_SequentialReads += 1
+            rfidReader_2.clearNullPolls()
+            rfidReader_2.update_tag(rfid_2_Queue.get(True), Q_READY)
+            rfidReader_2.setFuelScanMsg("2-BBT" + rfidReader_2.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n') # VID 800 outputs \r\n in the msg
+            rfidReader_2.incSequentialReads()
                                                                                 # increment the counter for RFID reader 2
-            if rfid_2_FuelScanMsg != rfid_2_PrevFuelScanMsg:
-                rfid_2_SequentialReads = 1
+            if (rfidReader_2.getFuelScanMsg() != rfidReader_2.getPrevFuelScanMsg()):
+                rfidReader_2.setSequentialReads(1)
 
-            rfid_2_PrevFuelScanMsg = rfid_2_FuelScanMsg                                                                                 # update previous RFID for lane 2
-            log2journal.debug("L2_TAG_DQ:<%s><%d><%s>", rfid_2_Reader.get_tag(), rfid_2_SequentialReads, repr(rfid_2_FuelScanMsg))# repr to show escape characters like \n
+            rfidReader_2.setPrevFuelScanMsg(rfidReader_2.getFuelScanMsg())                                                                                 # update previous RFID for lane 2
+            log2journal.debug("L2_TAG_DQ:<%s><%d><%s>", rfidReader_2.get_tag(), rfidReader_2.getSequentialReads(), repr(rfidReader_2.getFuelScanMsg()))# repr to show escape characters like \n
 
         # log the Tag being detected in both lanes.
-        if((rfid_1_Reader.is_tag_valid()) and (rfid_2_Reader.is_tag_valid())):
-            if(rfid_2_Reader.get_tag() == rfid_1_Reader.get_tag()):
-                log2journal.warning("TAG 1:<%s>2:<%s> in BOTH LANES", rfid_1_Reader.get_tag(), rfid_2_Reader.get_tag())
+        if((rfidReader_1.is_tag_valid()) and (rfidReader_2.is_tag_valid())):
+            if(rfidReader_2.get_tag() == rfidReader_1.get_tag()):
+                log2journal.warning("TAG 1:<%s><%d> 2:<%s><%d> in BOTH Qs", rfidReader_1.get_tag(), rfidReader_1.getSequentialReads(), rfidReader_2.get_tag(), rfidReader_2.getSequentialReads())
 
 
 
@@ -581,10 +573,10 @@ if __name__ == '__main__':
                 break
 
         vid_L1_Msg = MSG_EMPTY                                                  # default value for VID lane 1
-        vid_L1_MsgsReadFromQ = 0                                                # more than 1 will indicate falling behind
+        vid_L1_cntReadFromQ = 0                                                # more than 1 will indicate falling behind
 
         vid_L2_Msg = MSG_EMPTY                                                  # default value for VID lane 2
-        vid_L2_MsgsReadFromQ = 0                                                # more than 1 will indicate falling behind
+        vid_L2_cntReadFromQ = 0                                                # more than 1 will indicate falling behind
 
         vidQEmpty:bool = True
 
@@ -593,23 +585,23 @@ if __name__ == '__main__':
         for vidIn in vidsList:
             if vidIn.startswith("1") :                                        # VID msgs for lane 1
                 vid_L1_Msg = vidIn
-                vid_L1_MsgsReadFromQ += 1
+                vid_L1_cntReadFromQ += 1
                 vidQEmpty = False
             elif vidIn.startswith("2") :                                        # VID msgs for lane 2
                 vid_L2_Msg = vidIn
-                vid_L2_MsgsReadFromQ += 1
+                vid_L2_cntReadFromQ += 1
                 vidQEmpty = False
 
         if(False == vidQEmpty):
-            log2journal.debug("VID_DQ V1:<%s><%d> V2:<%s><%d>", vid_L1_Msg, vid_L1_MsgsReadFromQ, vid_L2_Msg, vid_L2_MsgsReadFromQ)
+            log2journal.debug("VID_DQ V1:<%s><%d> V2:<%s><%d>", repr(vid_L1_Msg), vid_L1_cntReadFromQ, repr(vid_L2_Msg), vid_L2_cntReadFromQ)
 
 
 
         ####################################
         # share data with diagnostic console
         ####################################
-        update_lane_data(sql3Conn, sql3Cursor, 1, vid_L1_Msg, rfid_1_FuelScanMsg)                                     # update lane 1 data in the database
-        update_lane_data(sql3Conn, sql3Cursor, 2, vid_L2_Msg, rfid_2_FuelScanMsg)                                     # update lane 2 data in the database
+        update_lane_data(sql3Conn, sql3Cursor, 1, vid_L1_Msg, rfidReader_1.getFuelScanMsg())                                     # update lane 1 data in the database
+        update_lane_data(sql3Conn, sql3Cursor, 2, vid_L2_Msg, rfidReader_2.getFuelScanMsg())                                     # update lane 2 data in the database
 
 
 
@@ -622,27 +614,27 @@ if __name__ == '__main__':
         vid_1_MatchesRfid1 = "V1!=R1"
         tagsIn = "L1_0TAG"
 
-        if (msg2BusNum(vid_L1_Msg) == msg2BusNum(rfid_1_FuelScanMsg)):
+        if (msg2BusNum(vid_L1_Msg) == msg2BusNum(rfidReader_1.getFuelScanMsg())):
             vid_1_MatchesRfid1 = "V1==R1"  #
 
-        tagId       =   rfid_1_Reader.get_tag()
-        lastTagId   =   rfid_1_Reader.get_last_tag()
+        tagId       =   rfidReader_1.get_tag()
+        lastTagId   =   rfidReader_1.get_last_tag()
 
-        if (rfid_1_SequentialReads > LANE_1_MIN) :                                                                                                              # get LANE_1_MIN_ consecutive reads to trust the data
+        if (rfidReader_1.getSequentialReads() > LANE_1_MIN) :                                                                 # get LANE_1_MIN_ consecutive reads to trust the data
             tagsIn = "L1_1TAG"
 
-            if((rfid_1_FuelScanMsg[2:9] == rfid_2_FuelScanMsg[2:9]) and (MSG_EMPTY not in rfid_1_FuelScanMsg ) and (MSG_POLLING not in rfid_1_FuelScanMsg )):   # Flag if the RFID is seen in both lanes
+            if(((rfidReader_1.getFuelScanMsg()[2:9] == rfidReader_2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in rfidReader_1.getFuelScanMsg()) and (MSG_POLLING not in rfidReader_1.getFuelScanMsg())):   # Flag if the RFID is seen in both lanes
                 tagsIn = "L1_2TAG"
 
-            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfid_1_FuelScanMsg), repr(rfid_1_FuelScanMsg))
-            log2CSV(now, 'L1_TAG', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, rfid_1_SequentialReads, rfid_1_NullPolls, vid_1_MatchesRfid1, tagsIn)
-            sendToSerial4("L1_T", rfid_1_FuelScanMsg)
+            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfidReader_1.getFuelScanMsg()), repr(rfidReader_1.getFuelScanMsg()))
+            log2CSV(now, 'L1_TAG', repr(vid_L1_Msg), rfidReader_1.getFuelScanMsg(), tagId, lastTagId, rfidReader_1.getSequentialReads(), rfidReader_1.getNullPolls(), vid_1_MatchesRfid1, tagsIn)
+            sendToSerial4("L1_T", rfidReader_1.getFuelScanMsg())
 
         # record RFID if VID is in scope
         ################################
         elif (vid_L1_Msg != MSG_EMPTY):
             if( is_vid_in_scope(msg2BusNum(vid_L1_Msg), csvFleetList)) :
-                log2CSV(now, 'L1_VID', vid_L1_Msg, rfid_1_FuelScanMsg, tagId, lastTagId, vid_L1_MsgsReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsIn)
+                log2CSV(now, 'L1_VID', repr(vid_L1_Msg), rfidReader_1.getFuelScanMsg(), tagId, lastTagId, vid_L1_cntReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsIn)
 
             if (len(vid_L1_Msg) == STD_MSG_LEN):
                 log2journal.debug("L1_VID FWD:<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
@@ -657,32 +649,32 @@ if __name__ == '__main__':
         vid_2_MatchesRfid2 = "V2!=R2"
         tagsIn = "L2_0TAG"
 
-        if (msg2BusNum(vid_L2_Msg) == msg2BusNum(rfid_2_FuelScanMsg)):
+        if (msg2BusNum(vid_L2_Msg) == msg2BusNum(rfidReader_2.getFuelScanMsg())):
             vid_2_MatchesRfid2 = "V2==R2"
 
-        tagId       =   rfid_2_Reader.get_tag()
-        lastTagId   =   rfid_2_Reader.get_last_tag()
+        tagId       =   rfidReader_2.get_tag()
+        lastTagId   =   rfidReader_2.get_last_tag()
 
-        if (rfid_2_SequentialReads > LANE_2_MIN) :
+        if (rfidReader_2.getSequentialReads() > LANE_2_MIN) :
             tagsIn = "L2_1TAG"
 
-            if((rfid_2_FuelScanMsg[2:9] == rfid_1_FuelScanMsg[2:9]) and (MSG_EMPTY not in rfid_2_FuelScanMsg ) and (MSG_POLLING not in rfid_2_FuelScanMsg )): # Flag if the RFID is seen in both lanes
+            if((rfidReader_2.getFuelScanMsg()[2:9] == rfidReader_1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in rfidReader_2.getFuelScanMsg()) and (MSG_POLLING not in rfidReader_2.getFuelScanMsg())): # Flag if the RFID is seen in both lanes
                 tagsIn = "L2_2TAG"
 
-            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfid_2_FuelScanMsg), repr(rfid_2_FuelScanMsg))
-            log2CSV(now, 'L2_TAG', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, rfid_2_SequentialReads, rfid_2_NullPolls, vid_2_MatchesRfid2, tagsIn)
-            sendToSerial4("L2_T", rfid_2_FuelScanMsg)
+            log2journal.debug("%s:<%d><%s>", tagsIn, len(rfidReader_2.getFuelScanMsg()), repr(rfidReader_2.getFuelScanMsg()))
+            log2CSV(now, 'L2_TAG', repr(vid_L2_Msg), rfidReader_2.getFuelScanMsg(), tagId, lastTagId, rfidReader_2.getSequentialReads(), rfidReader_2.getNullPolls(), vid_2_MatchesRfid2, tagsIn)
+            sendToSerial4("L2_T", rfidReader_2.getFuelScanMsg())
 
         # record rRFID if VID is in scope
         #################################
         elif (vid_L2_Msg != MSG_EMPTY) :
 
             if (is_vid_in_scope(msg2BusNum(vid_L2_Msg), csvFleetList)) :
-                log2CSV(now, 'L2_VID', vid_L2_Msg, rfid_2_FuelScanMsg, tagId, lastTagId, vid_L2_MsgsReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsIn)
+                log2CSV(now, 'L2_VID', repr(vid_L2_Msg), rfidReader_2.getFuelScanMsg(), tagId, lastTagId, vid_L2_cntReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsIn)
 
             if (len(vid_L2_Msg) == STD_MSG_LEN):
                 log2journal.debug("L2_VID FWD:<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
-                sendToSerial4("L2_V", vid_L2_Msg)
+                sendToSerial4("L2_V", repr(vid_L2_Msg))
             else :
                 log2journal.info("L2_VID Short:<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
                 if (len(vid_L2_Msg) == VID_MSG_MISSING_ODO_LEN):
