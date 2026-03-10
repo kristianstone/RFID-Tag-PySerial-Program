@@ -227,6 +227,8 @@ Follow the journal the specified unit (Service)
 
     journalctl -f -l -p7 --no-hostname                  -u rfid-fuellane-id.service -n100
     journalctl -f -l -p7 --no-hostname -o short-precise -u rfid-fuellane-id.service -n100
+    journalctl -f -l -p7 --no-hostname -o short-precise -u rfid-fuellane-id.service -n100 | sed 's/__main__\[[0-9]*\]://g'
+
 
 to exclude logging Levels use -p7
 ---------------------------------
@@ -366,3 +368,5 @@ To serial connect to the Reader
 ===============================
  picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity n --databits 8 /dev/ttyUSB0
  picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity n --databits 8 /dev/ttyUSB1
+
+picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity e --databits 7 /dev/ttyUSB1

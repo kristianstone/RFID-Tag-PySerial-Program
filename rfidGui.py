@@ -1,7 +1,9 @@
-from dash import Dash, html, dcc, callback, Output, Input
-import dash_daq as daq
+# pylint: disable=C0112, C0114, C0115, C0116
+
 import sqlite3
 import subprocess
+from dash import Dash, html, dcc, callback, Output, Input
+import dash_daq as daq
 
 
 # function to read data from the database

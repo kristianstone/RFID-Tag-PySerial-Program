@@ -1,3 +1,4 @@
+# pylint: disable=C0114, C0115, C0116
 """
 A module that declares classes for the RFID Fuelbay Project.
 """
@@ -28,22 +29,20 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.tagNumber      = tagNumber     # instance attribute
-        self.lastTagNumber  = tagNumber
-        self.qStatus        :int = Q_EMPTY
-        self.sequentialReads:int = 1
-        self.nullPolls      :int = 0
-        self.tagValid       = False
-        self.fleetNumber    = "TagUnknown"
-        self.fuelScanMsg    :str = MSG_EMPTY
-        self.prevFuelScanMsg:str = MSG_INIT                      # initial RFID for lane 1
+        self.tagNumber      :str  = tagNumber     # instance attribute
+        self.lastTagNumber  :str  = tagNumber
+        self.qStatus        :int  = Q_EMPTY
+        self.sequentialReads:int  = 1
+        self.nullPolls      :int  = 0
+        self.tagValid       :bool = False
+        self.fleetNumber    :str  = "TagUnknown"
+        self.fuelScanMsg    :str  = MSG_EMPTY
+        self.prevFuelScanMsg:str  = MSG_INIT                      # initial RFID for lane 1
 
 
     # get status - not required but will leave for video testing
     def get_status(self):
-        """
-        The status of the RFID reader/ VID 800
-        """
+        # The status of the RFID reader/ VID 800
         return self.status
 
 
@@ -56,9 +55,7 @@ class Reader:
 
     # get tag
     def get_tag(self) -> str :
-        """
-        Returns the string of the RFID tag/ VID Tag currently being detected
-        """
+        # Returns the string of the RFID tag/ VID Tag currently being detected
         s = self.tagNumber
         ## WAB strip off trailing unprintable
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
@@ -108,17 +105,12 @@ class Reader:
 
     # get tag
     def is_tag_valid(self) -> bool :
-        """
-        Returns the string of the RFID tag/ VID Tag currently being detected
-        """
         return self.tagValid
 
     # get tag
     def get_last_tag(self) -> str:
-        """
-        Returns the string of the Last  RFID tag/ VID Tag detected
-        """
-        ## WAB strip off trailing unprintable
+        # Returns the string of the Last  RFID tag/ VID Tag detected
+        # WAB strip off trailing unprintable
         s = self.lastTagNumber
         index = self.find_first_unprintable(s)
         return self.lastTagNumber[:index]
@@ -127,12 +119,7 @@ class Reader:
 
     # change tag
     def update_tag(self, newTag, qStatus) -> bool :
-        """
-        Function to update the tag being read by the RFID Reader/ VID 800
-
-        Args:
-            newTag: New tag string
-        """
+        # Function to update the tag being read
 
         if(newTag[0] == 'n' or newTag[0] == 'N') :                          # record last valid tag
             self.lastTagNumber = self.tagNumber
@@ -148,9 +135,10 @@ class Reader:
 
 
     ## WAB ToDo This needs polishing.
+    ## - rfid tags are:  "EMPTY" "2_POLLING_" or "1_POLLING_"
     ## Concerns:
     ## - misreads from RFID readers i.e. does not consider chars and will break
-    ## - rfid tags are:  "EMPTY" "T2_POLLING_" or "T1_POLLING_"
+
 
     def get_BusNumFromTag(self, csvFile):
         """
