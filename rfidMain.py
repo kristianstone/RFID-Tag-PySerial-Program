@@ -471,7 +471,8 @@ if __name__ == '__main__':
 
     ######################################
     # extract fleet number from VID String
-    # assumes the VID string is formatted as "L-BBT<fleet_number>,00000000"
+    # assumes the VID string is formatted
+    # as "L-BBT<fleet_number>,00000000"
     ######################################
     def msg2BusNum(msg):
         try:
@@ -622,6 +623,7 @@ if __name__ == '__main__':
             tagsIn = "L1_1TAG"
 
             if(((rfidReader_1.getFuelScanMsg()[2:9] == rfidReader_2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in rfidReader_1.getFuelScanMsg()) and (MSG_POLLING not in rfidReader_1.getFuelScanMsg())):   # Flag if the RFID is seen in both lanes
+                log2journal.error("%s T1:<%s> T2<%s>", tagsIn, repr(rfidReader_1.getFuelScanMsg()), repr(rfidReader_2.getFuelScanMsg()))
                 tagsIn = "L1_2TAG"
 
             log2journal.debug("%s:<%d><%s>", tagsIn, len(rfidReader_1.getFuelScanMsg()), repr(rfidReader_1.getFuelScanMsg()))
@@ -657,6 +659,7 @@ if __name__ == '__main__':
             tagsIn = "L2_1TAG"
 
             if((rfidReader_2.getFuelScanMsg()[2:9] == rfidReader_1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in rfidReader_2.getFuelScanMsg()) and (MSG_POLLING not in rfidReader_2.getFuelScanMsg())): # Flag if the RFID is seen in both lanes
+                log2journal.error("%s T2:<%s> T1<%s>", tagsIn, repr(rfidReader_2.getFuelScanMsg()), repr(rfidReader_1.getFuelScanMsg()))
                 tagsIn = "L2_2TAG"
 
             log2journal.debug("%s:<%d><%s>", tagsIn, len(rfidReader_2.getFuelScanMsg()), repr(rfidReader_2.getFuelScanMsg()))

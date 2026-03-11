@@ -122,12 +122,13 @@ class Reader:
         # Function to update the tag being read
 
         if(newTag[0] == 'n' or newTag[0] == 'N') :                          # record last valid tag
-            self.lastTagNumber = self.tagNumber
             self.tagValid = True
         else:
             self.tagValid = False
 
+        self.lastTagNumber = self.tagNumber
         self.tagNumber = newTag
+
         self.status = qStatus
 
         return self.tagValid
