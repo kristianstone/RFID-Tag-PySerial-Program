@@ -393,8 +393,8 @@ if __name__ == '__main__':
     ###########################
     #connect reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
     try:
-       #rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                           # open serial port default 8N1
-        rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=7, parity="E", stopbits=1)                                            # open serial port default 7E1 - default
+        rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                           # open serial port default 8N1
+        #rfid_1_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=7, parity="E", stopbits=1)                                          # open serial port default 7E1 - default
 
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: reader 1: {%s}",e)
@@ -403,8 +403,8 @@ if __name__ == '__main__':
 
     # connect reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
     try:
-       #rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                           # open serial port default 8N1
-        rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=7, parity="E", stopbits=1)                                            # open serial port default 7E1 - default
+        rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=8, parity="N", stopbits=1)                                           # open serial port default 8N1
+        #rfid_2_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=7, parity="E", stopbits=1)                                          # open serial port default 7E1 - default
     except serial.SerialException as e:
         log2journal.error("Error opening serial port for: reader 2: {%s}",e)
         rpiRelay = LED_ON                                                                        # turn on LED
@@ -678,9 +678,14 @@ if __name__ == '__main__':
                 if (len(vid_L2_Msg) == VID_MSG_MISSING_ODO_LEN):                                                            # if repairable pad then
                     sendToSerial4("L2_X", (vid_L2_Msg[:-2] + ",00000000" + "\r\n"))                                         # send to serial port 4
 
-        # RFID Reader and VID are on 1 sec period.
+        #######################################################
+        # RFID Readers have P81 SW reset to Default Calibration
+        # SC40A has been sent to ensure 1 second repeat
+        # #####################################################
+        # VID are on 1 sec period.
         # Slightly over sample to ensure keeping up
-        # Allow for empty buffers occasionally
+        # But be aware empty buffers occasionally
+        #######################################################
 
         time.sleep(0.9)  # sleep
 
