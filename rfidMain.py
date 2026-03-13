@@ -307,9 +307,9 @@ if __name__ == '__main__':
 
 
 
-    ###########################
+    ##########################
     # Collect commandline args
-    ###########################
+    ##########################
     cmdLineParser = argparse.ArgumentParser(description=" Looking back down the fuel lane from the front of the Bus\r\n LEFT Lane is Lane 1\r\n Right Lane is lane 2")
 
     cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="[0] Disables logging to csv. [1] Enables logging to CSV file")
@@ -582,11 +582,14 @@ if __name__ == '__main__':
 
         # lane 1 rfid_1
         ###############
-        vid_1_MatchesRfid1 = "V1!=R1"
-        tagsIn = "L1_0TAG"
 
+        tagsIn = "L1_0TAG"
         if (msg2BusNum(vid_L1_Msg) == msg2BusNum(lane1.getFuelScanMsg())):
             vid_1_MatchesRfid1 = "V1==R1"  #
+        else:
+            vid_1_MatchesRfid1 = "V1!=R1"
+            log2journal.error("VID1 and TAG1 Bus do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
+
 
         tagId       =   lane1.getTag()
         lastTagId   =   lane1.getLastTag()
@@ -619,11 +622,12 @@ if __name__ == '__main__':
 
     # lane 2 rfid_2
     ###############
-        vid_2_MatchesRfid2 = "V2!=R2"
         tagsIn = "L2_0TAG"
-
         if (msg2BusNum(vid_L2_Msg) == msg2BusNum(lane2.getFuelScanMsg())):
-            vid_2_MatchesRfid2 = "V2==R2"
+            vid_1_MatchesRfid1 = "V2==R2"  #
+        else:
+            vid_1_MatchesRfid1 = "V2!=R2"
+            log2journal.error("VID2 and TAG2 Bus Nums do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
 
         tagId       =   lane2.getTag()
         lastTagId   =   lane2.getLastTag()

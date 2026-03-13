@@ -159,7 +159,7 @@ class Reader:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
         """
 
-        self.fleetNumber = "Tag Unknown" # default not registered
+        self.fleetNumber = "XXXX" # default not registered
 
         if ((self.tagNumber[0] == 'N') or (self.tagNumber[0] == 'n')) :
             with open(csvFile, mode='r', encoding="utf-8") as file: # read each row of csv file
