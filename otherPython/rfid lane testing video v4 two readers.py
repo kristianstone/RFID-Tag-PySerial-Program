@@ -24,27 +24,27 @@ rfid_1_Reader = Reader(False, "EMPTY") # initalize first reader
 rfid_2_Reader = Reader(False, "EMPTY") # second reader
 
 # queue creation
-rfid_1_Queue = queue.Queue() # queue for reader 1
-rfid_2_Queue = queue.Queue() # queue for reader 2
+lane1Q = queue.Queue() # queue for reader 1
+lane2Q = queue.Queue() # queue for reader 2
 
 # reader 1
-rfid_1_In = serial.Serial('COM9', baudrate=9600) # change COM depending on device
+lane1Serial_In = serial.Serial('COM9', baudrate=9600) # change COM depending on device
 
 # reader 2
-rfid_2_In = serial.Serial('COM8', baudrate=9600)
+lane2Serial_In = serial.Serial('COM8', baudrate=9600)
 
 # create serial read lines
 def serial_read(s, readerName):
     while 1:
         sline = s.readline()
-        if readerName == "RFRD1:": # add to reader 1 queue
-            rfid_1_Queue.put(readerName + sline.decode('utf-8'))
+        if readerName == "Lane1:": # add to reader 1 queue
+            lane1Q.put(readerName + sline.decode('utf-8'))
         else: # add to reader 2 queue
-            rfid_2_Queue.put(readerName + sline.decode('utf-8'))
+            lane2Q.put(readerName + sline.decode('utf-8'))
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(rfid_1_In, "RFRD1:",)).start() # reader 1 thread
-r2 = threading.Thread(target=serial_read, args=(rfid_2_In, "RFRD2:",)).start() # reader 2 thread
+r1 = threading.Thread(target=serial_read, args=(lane1Serial_In, "Lane1:",)).start() # reader 1 thread
+r2 = threading.Thread(target=serial_read, args=(lane2Serial_In, "Lane2:",)).start() # reader 2 thread
 
 # webcam init
 
@@ -119,39 +119,39 @@ while True:
     # check reader communication
 
     # for reader 1
-    if rfid_1_Queue.empty():
-        rfid_1_Reader.update_tag("EMPTY")
+    if lane1Q.empty():
+        rfid_1_Reader.updateTag("EMPTY")
         rfid_1_NullPolls += 1 # increment for each empty print
     else:
-        rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
-        f.write(now.strftime("%H:%M:%S ") + rfid_1_Reader.get_tag()) # save tag read to data file
+        rfid_1_Reader.updateTag(lane1Q.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfid_1_Reader.getTag()) # save tag read to data file
 
     # for reader 2
-    if rfid_2_Queue.empty():
-        rfid_2_Reader.update_tag("EMPTY")
+    if lane2Q.empty():
+        rfid_2_Reader.updateTag("EMPTY")
         rfid_2_NullPolls += 1 # increment for each empty print
     else:
-        rfid_2_Reader.update_tag(rfid_2_Queue.get(True))
-        f.write(now.strftime("%H:%M:%S ") + rfid_2_Reader.get_tag()) # save tag read to data file
+        rfid_2_Reader.updateTag(lane2Q.get(True))
+        f.write(now.strftime("%H:%M:%S ") + rfid_2_Reader.getTag()) # save tag read to data file
 
     # reader 1 checks
-    if rfid_1_Reader.get_tag() == "EMPTY" and rfid_1_NullPolls > 30:
+    if rfid_1_Reader.getTag() == "EMPTY" and rfid_1_NullPolls > 30:
         rfid_1_Reader.change_status(False)
         reader1Text = "No Read" # update video text
 
-    if rfid_1_Reader.get_tag()[0] == "R":
+    if rfid_1_Reader.getTag()[0] == "R":
         rfid_1_Reader.change_status(True)
-        reader1Text = rfid_1_Reader.get_tag().rstrip()
+        reader1Text = rfid_1_Reader.getTag().rstrip()
         rfid_1_NullPolls = 0
 
     # reader 2 checks
-    if rfid_2_Reader.get_tag() == "EMPTY" and rfid_2_NullPolls > 30:
+    if rfid_2_Reader.getTag() == "EMPTY" and rfid_2_NullPolls > 30:
         rfid_2_Reader.change_status(False)
         reader2Text = "No Read" # update video text
 
-    if rfid_2_Reader.get_tag()[0] == "R":
+    if rfid_2_Reader.getTag()[0] == "R":
         rfid_2_Reader.change_status(True)
-        reader2Text = rfid_2_Reader.get_tag().rstrip()
+        reader2Text = rfid_2_Reader.getTag().rstrip()
         rfid_2_NullPolls = 0
 
     f.close() # close after writing

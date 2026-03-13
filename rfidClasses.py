@@ -12,10 +12,10 @@ class Reader:
 
     Attributes:
           get_status:
-          get_tag: A string of the RFID tag/ VID Tag currently being detected
+          tag: A string of the RFID tag/ VID Tag currently being detected
           change_status:
-          update_tag: Function to update the tag being detected
-          get_BusNumFromTag: Function to convert RFID tag into a VID 800 format string
+          updateTag: Function to update the tag being detected
+          getBusNumFromTag: Function to convert RFID tag into a VID 800 format string
 
     """
 
@@ -30,23 +30,21 @@ class Reader:
             lastTagNumber
         """
         self.tagNumber      :str  = tagNumber     # instance attribute
+        self.tagValid       :bool = False
+        self.batteryState   :str  = "ABSENT"
+        self.sequentialReads:int  = 1
         self.lastTagNumber  :str  = tagNumber
         self.qStatus        :int  = Q_EMPTY
-        self.sequentialReads:int  = 1
+
         self.nullPolls      :int  = 0
-        self.tagValid       :bool = False
+
         self.fleetNumber    :str  = "TagUnknown"
         self.fuelScanMsg    :str  = MSG_EMPTY
+
         self.prevFuelScanMsg:str  = MSG_INIT                      # initial RFID for lane 1
 
 
-    # get status - not required but will leave for video testing
-    def get_status(self):
-        # The status of the RFID reader/ VID 800
-        return self.status
-
-
-    def find_first_unprintable(self, s) -> int:
+    def findFirstUnprintable(self, s) -> int:
         for i, char in enumerate(s):
             if not char.isprintable():
                 return i                    # Return the index immediately upon finding the first unprintable char
@@ -54,12 +52,12 @@ class Reader:
 
 
     # get tag
-    def get_tag(self) -> str :
+    def getTag(self) -> str :
         # Returns the string of the RFID tag/ VID Tag currently being detected
         s = self.tagNumber
         ## WAB strip off trailing unprintable
         ## index = next((i for i, x in enumerate(s) if not x.isprintable()), None)
-        index = self.find_first_unprintable(s)
+        index = self.findFirstUnprintable(s)
         return self.tagNumber[:index]
 
 
@@ -104,32 +102,43 @@ class Reader:
 
 
     # get tag
-    def is_tag_valid(self) -> bool :
+    def isTagValid(self) -> bool :
         return self.tagValid
 
+    # get tag Battry Condition
+    def getBatteryStatus(self) -> str :
+        return self.batteryState
+
     # get tag
-    def get_last_tag(self) -> str:
+    def getLastTag(self) -> str:
         # Returns the string of the Last  RFID tag/ VID Tag detected
         # WAB strip off trailing unprintable
         s = self.lastTagNumber
-        index = self.find_first_unprintable(s)
+        index = self.findFirstUnprintable(s)
         return self.lastTagNumber[:index]
 
 
 
     # change tag
-    def update_tag(self, newTag, qStatus) -> bool :
+    def updateTag(self, newTag, status) -> bool :
         # Function to update the tag being read
 
-        if(newTag[0] == 'n' or newTag[0] == 'N') :                          # record last valid tag
+        if(newTag[0] == 'N') :                          # record last valid tag
             self.tagValid = True
-        else:
+            self.batteryState = "CHARGED"
+
+        elif(newTag[0] == 'n') :                          # record last valid tag
+            self.tagValid = True
+            self.batteryState = "REPLACE"
+
+        else :
             self.tagValid = False
+            self.batteryState = "ABSENT"
 
         self.lastTagNumber = self.tagNumber
         self.tagNumber = newTag
 
-        self.status = qStatus
+        self.qStatus = status
 
         return self.tagValid
 
@@ -141,7 +150,7 @@ class Reader:
     ## - misreads from RFID readers i.e. does not consider chars and will break
 
 
-    def get_BusNumFromTag(self, csvFile):
+    def getBusNumFromTag(self, csvFile):
         """
         Function to convert the RFID tag string to the fleet number of the bus the tag
         is fitted to.

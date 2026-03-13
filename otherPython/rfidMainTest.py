@@ -62,8 +62,8 @@ vid_Reader = Reader(False, "EMPTY") # VID detector lane 1
 
 
 # queue creation
-rfid_1_Queue = queue.Queue() # queue for reader 1
-rfid_2_Queue = queue.Queue() # queue for reader 2
+lane1Q = queue.Queue() # queue for reader 1
+lane2Q = queue.Queue() # queue for reader 2
 vidQueue = queue.Queue() # queue for VID detector
 
 '''
@@ -72,7 +72,7 @@ Serial Port Allocations
 # reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
 
 try:
-    rfid_1_In = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
+    lane1Serial_In = serial.Serial('COM19', baudrate=9600) #open serial port default 8N1
 except serial.SerialException as e:
     print(f"Error opening serial port for reader 1: {e}")
     #rpi.io.RevPiOutput.value = 1 # turn on LED
@@ -98,10 +98,10 @@ def serial_read(s, readerName):
     while 1:
         try:
             sline = s.readline()
-            if readerName == "RFRD1:": # add to reader 1 queue
-                rfid_1_Queue.put(sline.decode('utf-8'))
-            elif readerName == "RFRD2:": # add to reader 2 queue
-                rfid_2_Queue.put(sline.decode('utf-8')) # may consider bringing readerName back
+            if readerName == "Lane1:": # add to reader 1 queue
+                lane1Q.put(sline.decode('utf-8'))
+            elif readerName == "Lane2:": # add to reader 2 queue
+                lane2Q.put(sline.decode('utf-8')) # may consider bringing readerName back
             else: # add to VID queue
                 vidQueue.put(sline.decode('utf-8'))
         except Exception as e:
@@ -141,7 +141,7 @@ def log_result(now, lane, vid, rfid, rfidNum, match):
 
 
 # creating each thread to receive data from readers
-r1 = threading.Thread(target=serial_read, args=(rfid_1_In, "RFRD1:",)).start() # reader 1 thread
+r1 = threading.Thread(target=serial_read, args=(lane1Serial_In, "Lane1:",)).start() # reader 1 thread
 
 vid = threading.Thread(target=serial_read, args=(vid_In, "VID",)).start() # VID detector thread
 
@@ -174,9 +174,9 @@ while True:
     now = dt.datetime.now()  # get current time for logging
 
     # lane 1 RFID reader queue
-    if rfid_1_Queue.empty():
-        rfid_1_Reader.update_tag("EMPTY")
-        rfid_1_FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class get_tag
+    if lane1Q.empty():
+        rfid_1_Reader.updateTag("EMPTY")
+        rfid_1_FuelScanMsg = "EMPTY" # this variable shouldnt be used, should use class tag
         rfid_1_NullPolls += 1 # increment the empty counter for RFID reader 1
 
         if rfid_1_NullPolls >= NO_READ_LIMIT: # seqNumFuelScanMsgFromRFID resets if too many empty reads
@@ -184,9 +184,9 @@ while True:
 
     else:
         rfid_1_NullPolls = 0 # reset empty counter if queue is not empty
-        rfid_1_Reader.update_tag(rfid_1_Queue.get(True))
+        rfid_1_Reader.updateTag(lane1Q.get(True))
         # conversion to the proper string, look up table handled inside of reader class
-        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.get_BusNumFromTag(csvFleetList) + ",00000000" + '\r\n'
+        rfid_1_FuelScanMsg = "1-BBT" + rfid_1_Reader.getBusNumFromTag(csvFleetList) + ",00000000" + '\r\n'
         seqNumFuelScanMsgFromRFID1 += 1
         if rfid_1_FuelScanMsg != prevFuelScanMsgFromRFID1:
             seqNumFuelScanMsgFromRFID1 = 0 # reset the counter to 0 if different tag is read
@@ -244,10 +244,10 @@ while True:
     # lane 1 comparison - plc_Out should be writing the VID anyway
     #if seqNumFuelScanMsgFromRFID1 > readCount1: #and vid_1_Msg == rfid_1_FuelScanMsg: added after trial
         # in future, this will be written to plc_Out, for now just record
-        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.get_tag(), vid_1_MatchesRfid1)
+        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.getTag(), vid_1_MatchesRfid1)
     # record regardless of RFID, but only if VID is in scope
     #elif vid_1_Msg != "EMPTY" and is_vid_in_scope(msg2BusNum(vid_1_Msg), csvFleetList):
-        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.get_tag(), vid_1_MatchesRfid1)
+        #log_result(now, '1', vid_1_Msg, rfid_1_FuelScanMsg, rfid_1_Reader.getTag(), vid_1_MatchesRfid1)
         #plc_Out.write(vid_1_Msg.encode('utf-8')) # send to serial port 4
 
     if seqNumFuelScanMsgFromRFID1 > readCount1:
