@@ -583,20 +583,18 @@ if __name__ == '__main__':
         # lane 1 rfid_1
         ###############
 
-        tagsIn = "L1_0TAG"
-        if (msg2BusNum(vid_L1_Msg) == msg2BusNum(lane1.getFuelScanMsg())):
-            vid_1_MatchesRfid1 = "V1==R1"  #
-        else:
-            vid_1_MatchesRfid1 = "V1!=R1"
-            log2journal.error("VID1 and TAG1 Bus do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
-
-
         tagId       =   lane1.getTag()
         lastTagId   =   lane1.getLastTag()
         tagBatt     =   lane1.getBatteryStatus()
 
         if (lane1.getSequentialReads() > LANE_1_MIN) :                                                                 # get LANE_1_MIN_ consecutive reads to trust the data
             tagsIn = "L1_1TAG"
+
+            if (msg2BusNum(vid_L1_Msg) == msg2BusNum(lane1.getFuelScanMsg())):
+                vid_1_MatchesRfid1 = "V1==R1"  #
+            else:
+                vid_1_MatchesRfid1 = "V1!=R1"
+                log2journal.error("VID1 and TAG1 Bus do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
 
             if(((lane1.getFuelScanMsg()[2:9] == lane2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in lane1.getFuelScanMsg()) and (MSG_POLLING not in lane1.getFuelScanMsg())):   # Flag if the RFID is seen in both lanes
                 log2journal.error("%s T1:<%s> T2<%s>", tagsIn, repr(lane1.getFuelScanMsg()), repr(lane2.getFuelScanMsg()))
@@ -622,12 +620,6 @@ if __name__ == '__main__':
 
     # lane 2 rfid_2
     ###############
-        tagsIn = "L2_0TAG"
-        if (msg2BusNum(vid_L2_Msg) == msg2BusNum(lane2.getFuelScanMsg())):
-            vid_1_MatchesRfid1 = "V2==R2"  #
-        else:
-            vid_1_MatchesRfid1 = "V2!=R2"
-            log2journal.error("VID2 and TAG2 Bus Nums do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
 
         tagId       =   lane2.getTag()
         lastTagId   =   lane2.getLastTag()
@@ -635,6 +627,12 @@ if __name__ == '__main__':
 
         if (lane2.getSequentialReads() > LANE_2_MIN) :
             tagsIn = "L2_1TAG"
+
+            if (msg2BusNum(vid_L2_Msg) == msg2BusNum(lane2.getFuelScanMsg())):
+                vid_2_MatchesRfid2 = "V2==R2"  #
+            else:
+                vid_2_MatchesRfid2 = "V2!=R2"
+                log2journal.error("VID2 and TAG2 Bus Nums do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
 
             if((lane2.getFuelScanMsg()[2:9] == lane1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in lane2.getFuelScanMsg()) and (MSG_POLLING not in lane2.getFuelScanMsg())): # Flag if the RFID is seen in both lanes
                 log2journal.error("%s T2:<%s> T1<%s>", tagsIn, repr(lane2.getFuelScanMsg()), repr(lane1.getFuelScanMsg()))
