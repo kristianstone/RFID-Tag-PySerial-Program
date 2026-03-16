@@ -449,16 +449,23 @@ if __name__ == '__main__':
     ######################################
     # extract fleet number from VID String
     # assumes the VID string is formatted
-    # as "L-BBT<fleet_number>,00000000"
+    # as "x-BBTxxxx,00000000\r\n"
+    #     012345678901234567 8 9
     ######################################
-    def msg2BusNum(msg):
-        try:
-            return msg.split(',')[0][5:]
-        except Exception as e: #Might make index error
-            # might include more logic here to handle different formats
-            print(f"Error extracting fleet number: '{msg}': {e}")
-            return None
-    #_#end msg2BusNum(
+    def busNumFromMsg(msg):
+        if ((STD_MSG_LEN == len(msg)) and ('BBT' == msg[2:5:1]) and (',' == msg[9])):
+            try:
+                return msg.split(',')[0][5:]
+            except Exception as e: #Might make index error
+                # might include more logic here to handle different formats
+                print(f"Error extracting fleet number: '{msg}': {e}")
+
+        return None
+    #_#end busNumFromMsg(
+
+
+
+
 
 
 ##############################################################################
@@ -595,11 +602,14 @@ if __name__ == '__main__':
         if (lane1.getSequentialReads() > LANE_1_MIN) :                                                                  # get LANE_1_MIN_ consecutive reads to trust the data
             tagsIn = "L1_1TAG"
 
-            if (msg2BusNum(vid_L1_Msg) == msg2BusNum(lane1.getFuelScanMsg())):
+            vid1Num = busNumFromMsg(vid_L1_Msg)
+            tag1Num = busNumFromMsg(lane1.getFuelScanMsg())
+
+            if ((vid1Num == tag1Num) and (vid1Num != None) and (tag1Num != None)):
                 vid_1_MatchesRfid1 = "V1==R1"  #
             else:
                 vid_1_MatchesRfid1 = "V1!=R1"
-                log2journal.warning("VID1 and TAG1 Bus do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
+                log2journal.warning("VID1:<%s> and TAG1:<%s> None or do not match.", vid1Num, tag1Num)
 
             # Flag if the RFID is seen in both lanes
             if(((lane1.getFuelScanMsg()[2:9] == lane2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in lane1.getFuelScanMsg()) and (MSG_POLLING not in lane1.getFuelScanMsg())):
@@ -613,8 +623,8 @@ if __name__ == '__main__':
         # record if VID is in scope
         ################################
         elif (vid_L1_Msg != MSG_EMPTY):
-
-            if( is_vid_in_scope(msg2BusNum(vid_L1_Msg), csvFleetList)) :
+            vid1Num = busNumFromMsg(vid_L1_Msg)
+            if( is_vid_in_scope(vid1Num, csvFleetList)) :
                 log2CSV(now, 'L1_VID', vid_L1_Msg, lane1.getFuelScanMsg(), tagId, tagBatt, lastTagId, vid_L1_cntReadFromQ, vidsListSize, vid_1_MatchesRfid1, tagsIn)
 
             if (len(vid_L1_Msg) == STD_MSG_LEN):
@@ -635,11 +645,14 @@ if __name__ == '__main__':
         if (lane2.getSequentialReads() > LANE_2_MIN) :
             tagsIn = "L2_1TAG"
 
-            if (msg2BusNum(vid_L2_Msg) == msg2BusNum(lane2.getFuelScanMsg())):
+            vid2Num = busNumFromMsg(vid_L2_Msg)
+            tag2Num = busNumFromMsg(lane2.getFuelScanMsg())
+
+            if (vid2Num == tag2Num) and (vid2Num != None) and (tag2Num != None):
                 vid_2_MatchesRfid2 = "V2==R2"
             else:
                 vid_2_MatchesRfid2 = "V2!=R2"
-                log2journal.warning("VID2 and TAG2 Bus Nums do not match %s %s", msg2BusNum(vid_L1_Msg), msg2BusNum(lane1.getFuelScanMsg()) )
+                log2journal.warning("VID2:<%s> and TAG2:<%s> None or do not match.", vid2Num, tag2Num)
 
             if((lane2.getFuelScanMsg()[2:9] == lane1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in lane2.getFuelScanMsg()) and (MSG_POLLING not in lane2.getFuelScanMsg())): # Flag if the RFID is seen in both lanes
                 log2journal.error("%s T2:<%s> T1<%s>", tagsIn, repr(lane2.getFuelScanMsg()), repr(lane1.getFuelScanMsg()))
@@ -653,7 +666,8 @@ if __name__ == '__main__':
         #################################
         elif (vid_L2_Msg != MSG_EMPTY) :
 
-            if (is_vid_in_scope(msg2BusNum(vid_L2_Msg), csvFleetList)) :
+            vid2Num = busNumFromMsg(vid_L2_Msg)
+            if (is_vid_in_scope(vid2Num, csvFleetList)) :
                 log2CSV(now, 'L2_VID', vid_L2_Msg, lane2.getFuelScanMsg(), tagId, tagBatt, lastTagId, vid_L2_cntReadFromQ, vidsListSize, vid_2_MatchesRfid2, tagsIn)
 
             if (len(vid_L2_Msg) == STD_MSG_LEN):
