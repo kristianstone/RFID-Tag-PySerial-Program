@@ -54,7 +54,7 @@ def update_lane_data(conn, cursor, laneNum, vid, rfid):
 # linear search may be slow as file gets bigger
 # use a binary tree ?
 # use a database ?
-# less tahn 2000 buses
+# less than 2000 buses
 ################################
 def is_vid_in_scope(fleet_number, fleetList):
     with open(fleetList, mode='r', encoding="utf-8") as file:

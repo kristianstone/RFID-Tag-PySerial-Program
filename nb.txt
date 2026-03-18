@@ -115,7 +115,8 @@ ExecStopPost=/bin/systemctl restart rfid-fuellane-gui.service
 
 User=pi
 # Optionally, add Restart options to make the service automatically restart if it crashes
-Restart=on-failure
+#Restart=on-failure
+Restart=always
 RestartSec=5s
 
 [Install]
