@@ -604,12 +604,15 @@ if __name__ == '__main__':
         # lane 1 rfid_1
         ###############
 
-        tagId           =   lane1.getTag()
-        lastTagId       =   lane1.getLastTag()
-        tagBatt         =   lane1.getBatteryStatus()
+        tagId           = lane1.getTag()
+        lastTagId       = lane1.getLastTag()
+        tagBatt         = lane1.getBatteryStatus()
+        tagIn           = "L1_1TAG"
+        vidMatchesRfid  = "_T1V1_"
 
         if (lane1.getSequentialReads() > LANE_1_MIN) :                                                                  # get LANE_1_MIN_ consecutive reads to trust the data
-            tagIn = "L1_1TAG"
+            tagIn           = "L1_1TAG"
+
             vid1Num = busNumFromMsg(vid_L1_Msg)
             tag1Num = busNumFromMsg(lane1.getFuelScanMsg())  # someting for several counts
 
@@ -653,12 +656,15 @@ if __name__ == '__main__':
     # lane 2 rfid_2
     ###############
 
-        tagId           =   lane2.getTag()
-        lastTagId       =   lane2.getLastTag()
-        tagBatt         =   lane2.getBatteryStatus()
+        tagId           = lane2.getTag()
+        lastTagId       = lane2.getLastTag()
+        tagBatt         = lane2.getBatteryStatus()
+        tagIn           = "L2_1TAG"
+        vidMatchesRfid  = "_T2V2_"
 
         if (lane2.getSequentialReads() > LANE_2_MIN) :
-            tagIn = "L2_1TAG"
+            tagIn           = "L2_1TAG"
+
             vid2Num = busNumFromMsg(vid_L2_Msg)
             tag2Num = busNumFromMsg(lane2.getFuelScanMsg())  # someting for several counts
 
