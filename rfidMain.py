@@ -17,9 +17,23 @@ import revpimodio2
 
 from cysystemd.journal import JournaldLogHandler
 
-from rfidConstants  import *
-from rfidClasses    import *
-from getGit         import *
+from rfidConstants  import SHUTDOWN_COUNT_DOWN
+from rfidConstants  import LED_ON
+from rfidConstants  import LED_OFF
+from rfidConstants  import STD_MSG_LEN
+from rfidConstants  import MSG_EMPTY
+from rfidConstants  import Q_EMPTY
+from rfidConstants  import MSG_POLLING
+from rfidConstants  import Q_POLLING
+from rfidConstants  import Q_READY
+from rfidConstants  import VID_MSG_MISSING_ODO_LEN
+
+from rfidClasses    import Reader
+
+from getGit         import get_git_short_hash
+from getGit         import get_latest_git_tag
+from getGit         import get_git_committer_info
+from getGit         import get_commit_date
 
 
 
@@ -45,7 +59,7 @@ def update_lane_data(conn, cursor, laneNum, vid, rfid):
         sys.exit(1)     # bail out and let systemd restart things
     conn.commit()       # commit the changes to the database
 
-#_#end update_lane_data(
+# #_#end update_lane_data(
 
 
 #################################
@@ -63,7 +77,7 @@ def is_vid_in_scope(fleet_number, fleetList):
                 return True
     return False
 
-#_#end is_vid_in_scope(
+# #_#end is_vid_in_scope(
 
 
 #######################
@@ -71,21 +85,21 @@ def is_vid_in_scope(fleet_number, fleetList):
 #######################
 def shutdown_countdown_func():
     while 1:                                                                                            # loop this thread to constantly monitor UPS status
-        if rpi.io.RevPiStatus.value & (1<<6):
+        if rpi.io.RevPiStatus.value & (1 << 6):
             for i in range(SHUTDOWN_COUNT_DOWN, 0, -1):
                 time.sleep(1)
-                if (rpi.io.RevPiStatus.value & (1<<6)):
+                if (rpi.io.RevPiStatus.value & (1 << 6)):
                     log2journal.warning("Shutdown aborted!")
                     time.sleep(1)
                     break
-                log2journal.critical("Shutting down in {%d} seconds...",i)
+                log2journal.critical("Shutting down in {%d} seconds...", i)
             else:
                 log2journal.critical("Shutting down now...")
                 os.system("sudo shutdown now")
         else:
             time.sleep(0.5)                                                                             # sleep for a short time to avoid busy waiting
 
-#_#end shutdown_countdown_func(
+# #_#end shutdown_countdown_func(
 
 
 #########################################
@@ -115,8 +129,8 @@ def serialReadLine(s, readerName):
         except Exception as e:
             log2journal.error("%s %s Serial Read Error : %s ", [{dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}], readerName, e)
             rpiRelay = LED_ON                                                                           # turn on LED
-    #_#end while 1
-#_#end serialReadLine(
+    # #_#end while 1
+# #_#end serialReadLine(
 
 
 
@@ -124,7 +138,7 @@ def serialReadLine(s, readerName):
 # Diagnostic Logging  to CSV
 ############################
 # considering another column which has flags that describe the mismatch issue
-def log2CSV( when, tagOrigin, vidMsg, tagMsg, tagNum, battStat, prevTagNum, seqNum, nullPolls, vidMatchesTag, tagCntInLane):
+def log2CSV(when, tagOrigin, vidMsg, tagMsg, tagNum, battStat, prevTagNum, seqNum, nullPolls, vidMatchesTag, tagCntInLane):
     """
     Stores the results of the program into a CSV file for data analysis.
     Data is placed into columns:
@@ -153,7 +167,7 @@ def log2CSV( when, tagOrigin, vidMsg, tagMsg, tagNum, battStat, prevTagNum, seqN
     global rpiRelay
 
     if (False is LOG_TO_CSV):
-        #log2journal.error("LOG_TO_CSV=%s",LOG_TO_CSV)
+        # log2journal.error("LOG_TO_CSV=%s",LOG_TO_CSV)
         return
 
     msgV    = repr(vidMsg)
@@ -162,14 +176,14 @@ def log2CSV( when, tagOrigin, vidMsg, tagMsg, tagNum, battStat, prevTagNum, seqN
     msgT    = repr(tagMsg)
     msgTlen = len(tagMsg)
 
-    log2journal.info   ("CSV [%s,VID->,%s,<%d>,TAG->,%s,<%d>,%s,<%s>,<%s>,%s,%s,%s,%s]", tagOrigin,msgV,msgVlen,msgT,msgTlen,tagNum,seqNum,nullPolls,prevTagNum,battStat,vidMatchesTag,tagCntInLane)
+    log2journal.info("CSV [%s,VID->,%s,<%d>,TAG->,%s,<%d>,%s,<%s>,<%s>,%s,%s,%s,%s]", tagOrigin, msgV, msgVlen, msgT, msgTlen, tagNum, seqNum, nullPolls, prevTagNum, battStat, vidMatchesTag, tagCntInLane)
 
     # create headers for csv file
     write_header = (not (os.path.exists(CSV_LOG_FILE)) or (os.stat(CSV_LOG_FILE).st_size == 0))
 
     try:
         with open(CSV_LOG_FILE, mode='a', encoding="utf-8", newline='') as csvfile:
-            fieldnames = ['Timestamp','TagOrigin','VIDMsg','VIDMsgLen','TagMsg','TagMsgLen','TagNum','TagSeqNum','NullPolls','PrevTagNum','BatteryStatus','VIDmatchsTag','TagsInLane']
+            fieldnames = ['Timestamp', 'TagOrigin', 'VIDMsg', 'VIDMsgLen', 'TagMsg', 'TagMsgLen', 'TagNum', 'TagSeqNum', 'NullPolls', 'PrevTagNum', 'BatteryStatus', 'VIDmatchsTag', 'TagsInLane']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if write_header:                                                                            # write header only if the file is new or has changed date
                 writer.writeheader()
@@ -189,33 +203,30 @@ def log2CSV( when, tagOrigin, vidMsg, tagMsg, tagNum, battStat, prevTagNum, seqN
                 'TagsInLane'        : tagCntInLane
             })
     except Exception as e:
-        log2journal.error("Error writing CSV line to file {CSV_LOG_FILE}: {%s}",e)
+        log2journal.error("Error writing CSV line to file {CSV_LOG_FILE}: {%s}", e)
         rpiRelay = LED_ON                                # turn on LED
 
-#_#end log2CSV(
+# #_#end log2CSV(
 
 #################################
 # send a string out serial port 4
 #################################
 def sendToSerial4(laneId, msg):
     # ToDo could do another last minute check to only allow WellFormatted msgs out
-    # if((MSG_POLLING not in rfid_1_FuelScanMsg) and (MSG_EMPTY not in rfid_1_FuelScanMsg)):
+    # if ((MSG_POLLING not in rfid_1_FuelScanMsg) and (MSG_EMPTY not in rfid_1_FuelScanMsg)):
 
-    if ( STD_MSG_LEN == len(msg) ):
-        if(True is SEND_TO_SERIAL_4):
+    if (STD_MSG_LEN == len(msg)):
+        if (True is SEND_TO_SERIAL_4):
             log2journal.info("Serial OUT:<%s>:<%s>", laneId, repr(msg))
             plc_Out.write(msg.encode('utf-8'))
     else:
         log2journal.warning("<%s>:<%s> is <%d> requires <%d>", laneId, repr(msg), len(msg), STD_MSG_LEN)
 
-#_#end sendToSerial4(
+# #_#end sendToSerial4(
 
-########################################################
-########################################################
+# #######################################################
+# #######################################################
 if __name__ == '__main__':
-########################################################
-########################################################
-
 
 
     ##############################
@@ -227,7 +238,7 @@ if __name__ == '__main__':
     # instantiate the JournaldLogHandler to hook into systemd
     journald_handler = JournaldLogHandler()
     # set a formatter to include the level name
-    #journald_handler.setFormatter(logging.Formatter('[%(levelname)s]-[%(filename)s:%(lineno)d:%(funcName)s]-> %(message)s'))
+    # journald_handler.setFormatter(logging.Formatter('[%(levelname)s]-[%(filename)s:%(lineno)d:%(funcName)s]-> %(message)s'))
     journald_handler.setFormatter(logging.Formatter('[%(levelname)s]-[%(filename)s:%(lineno)d]->  %(message)s'))
     # add the journald handler to the current logger
     log2journal.addHandler(journald_handler)
@@ -303,10 +314,10 @@ if __name__ == '__main__':
     SEND_TO_SERIAL_4:   bool    = False
     MONITOR_UPS:        bool    = False
 
-    lane1Q:              queue.Queue[str]  = queue.Queue()  # queue for reader 1
+    lane1Q:             queue.Queue[str]  = queue.Queue()  # queue for reader 1
     lane1:              Reader = Reader(MSG_EMPTY)          # initalize first reader
 
-    lane2Q:              queue.Queue[str]  = queue.Queue()  # queue for reader 2
+    lane2Q:             queue.Queue[str]  = queue.Queue()  # queue for reader 2
     lane2:              Reader = Reader(MSG_EMPTY)          # second reader
 
 
@@ -320,14 +331,14 @@ if __name__ == '__main__':
     cmdLineParser.add_argument("--csvLogging",  "-c", type=int, default=1, help="[0] Disables logging to csv. [1] Enables logging to CSV file")
     cmdLineParser.add_argument("--debugLevel",  "-d", type=int, default=1, help="[0] NOTSET, [1] DEBUG, [2] INFO, [3] WARNING, [4] ERROR, [5] CRITICAL")
 
-    cmdLineParser.add_argument("--emptyLaneMin","-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
+    cmdLineParser.add_argument("--emptyLaneMin", "-e", type=int, default=3, help="Min number of consecutive Tag null reads to deem a Lane is vacant.")
 
     cmdLineParser.add_argument("--leftLaneMin", "-l", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 1.")
-    cmdLineParser.add_argument("--rightLaneMin","-r", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 2.")
+    cmdLineParser.add_argument("--rightLaneMin", "-r", type=int, default=5, help="Min number [5] of consecutive Tag reads before is declared present in Lane 2.")
 
-    cmdLineParser.add_argument("--fwdViaSerial","-s", type=int, default=0, help="[0] Disables forwarding. [1] Enables forwarding")
+    cmdLineParser.add_argument("--fwdViaSerial", "-s", type=int, default=0, help="[0] Disables forwarding. [1] Enables forwarding")
 
-    cmdLineParser.add_argument("--monitorUPS","-u",   type=int, default=0, help="[0] Disables UPS monitor. [1] Enables UPS Monitor")
+    cmdLineParser.add_argument("--monitorUPS", "-u",   type=int, default=0, help="[0] Disables UPS monitor. [1] Enables UPS Monitor")
 
     cmdLineArgs = cmdLineParser.parse_args()
 
@@ -368,38 +379,38 @@ if __name__ == '__main__':
     ###########################
     ### Serial Port Allocations
     ###########################
-    #connect reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
+    # connect reader 1 - port 1 - COM11 on Windows - /dev/ttyUSB0 on Linux assumed
     try:
-        lane1Serial_In = serial.Serial  ('/dev/ttyUSB0', baudrate=9600, bytesize=8, parity="N", stopbits=1)     # open serial port default 8N1
-        #lane1Serial_In = serial.Serial  ('/dev/ttyUSB0', baudrate=9600, bytesize=7, parity="E", stopbits=1)    # open serial port default 7E1 - default
+        lane1Serial_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=8, parity="N", stopbits=1)     # open serial port default 8N1
+        # lane1Serial_In = serial.Serial('/dev/ttyUSB0', baudrate=9600, bytesize=7, parity="E", stopbits=1)    # open serial port default 7E1 - default
 
     except serial.SerialException as e:
-        log2journal.error("Error opening serial port for: reader 1: {%s}",e)
+        log2journal.error("Error opening serial port for: reader 1: {%s}", e)
         rpiRelay = LED_ON                                                                                       # turn on LED
         sys.exit()
 
     # connect reader 2 - port 2 - COM7 on Windows - /dev/ttyUSB1 on Linux
     try:
-        lane2Serial_In = serial.Serial  ('/dev/ttyUSB1', baudrate=9600, bytesize=8, parity="N", stopbits=1)     # open serial port default 8N1
-        #lane2Serial_In = serial.Serial  ('/dev/ttyUSB1', baudrate=9600, bytesize=7, parity="E", stopbits=1)    # open serial port default 7E1 - default
+        lane2Serial_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=8, parity="N", stopbits=1)     # open serial port default 8N1
+        # lane2Serial_In = serial.Serial('/dev/ttyUSB1', baudrate=9600, bytesize=7, parity="E", stopbits=1)    # open serial port default 7E1 - default
     except serial.SerialException as e:
-        log2journal.error("Error opening serial port for: reader 2: {%s}",e)
+        log2journal.error("Error opening serial port for: reader 2: {%s}", e)
         rpiRelay = LED_ON                                                                                       # turn on LED
         sys.exit()
 
     # connect VID detector input - port 3 - /dev/ttyUSB2 on Linux
     try:
-        vid_In = serial.Serial          ('/dev/ttyUSB2', baudrate=9600, bytesize=8, parity="N", stopbits=1)
+        vid_In = serial.Serial('/dev/ttyUSB2', baudrate=9600, bytesize=8, parity="N", stopbits=1)
     except serial.SerialException as e:
-        log2journal.error("Error opening serial port for: VID detector: {%s}",e)
+        log2journal.error("Error opening serial port for: VID detector: {%s}", e)
         rpiRelay = LED_ON                                                                                       # turn on LED
         sys.exit()
 
     # connect output serial port - port 4 - /dev/ttyUSB3 on linux
     try:
-        plc_Out = serial.Serial         ('/dev/ttyUSB3', baudrate=9600, bytesize=8, parity="N", stopbits=1)
+        plc_Out = serial.Serial('/dev/ttyUSB3', baudrate=9600, bytesize=8, parity="N", stopbits=1)
     except serial.SerialException as e:
-        log2journal.error("Error opening serial port for: output: {%s}",e)
+        log2journal.error("Error opening serial port for: output: {%s}", e)
         rpiRelay = LED_ON                                                                                       # turn on LED
         sys.exit()
 
@@ -456,12 +467,12 @@ if __name__ == '__main__':
         if ((STD_MSG_LEN == len(msg)) and ('BBT' == msg[2:5:1]) and (',' == msg[9])):
             try:
                 return msg.split(',')[0][5:]
-            except Exception as e: #Might make index error
+            except Exception as e:  # Might make index error
                 # might include more logic here to handle different formats
                 print(f"Error extracting fleet number: '{msg}': {e}")
 
         return None
-    #_#end busNumFromMsg(
+    # #_#end busNumFromMsg(
 
 
 
@@ -491,7 +502,7 @@ if __name__ == '__main__':
             else :
                 lane1.incNullPolls()
                 lane1.updateTag(MSG_POLLING, Q_POLLING)
-                lane1.setFuelScanMsg( "1-" + MSG_POLLING + '-' + str(lane1.getNullPolls()))
+                lane1.setFuelScanMsg("1-" + MSG_POLLING + '-' + str(lane1.getNullPolls()))
                 log2journal.warning("L1_Poll:<%s>", repr(lane1.getFuelScanMsg()))                                                   # increment the empty counter for RFID reader 1
         else :
             lane1.clearNullPolls()                                                                                                  # reset empty counter if queue is not empty
@@ -503,7 +514,7 @@ if __name__ == '__main__':
                 lane1.setSequentialReads(1)                                                                                         # reset the counter to 1 if different tag is read
 
             lane1.setPrevFuelScanMsg(lane1.getFuelScanMsg())                                                                        # update previous RFID for lane 1
-            log2journal.debug("L1_TAG_DQ:<%s><%d><%s>",lane1.getTag(), lane1.getSequentialReads(), repr(lane1.getFuelScanMsg()))    # log the current RFID
+            log2journal.debug("L1_TAG_DQ:<%s><%d><%s>", lane1.getTag(), lane1.getSequentialReads(), repr(lane1.getFuelScanMsg()))    # log the current RFID
 
 
 
@@ -516,11 +527,11 @@ if __name__ == '__main__':
                     log2journal.debug("L2_Q_Empty:<%s><%d>", repr(lane2.getFuelScanMsg()), lane2.getSequentialReads())
                     lane2.clearSequentialReads()
                     lane2.updateTag(MSG_EMPTY, Q_EMPTY)
-                    lane2.setFuelScanMsg( MSG_EMPTY)
+                    lane2.setFuelScanMsg(MSG_EMPTY)
             else :
                 lane2.incNullPolls()
                 lane2.updateTag(MSG_POLLING, Q_POLLING)
-                lane2.setFuelScanMsg( "2-" + MSG_POLLING + '-' + str(lane2.getNullPolls()))
+                lane2.setFuelScanMsg("2-" + MSG_POLLING + '-' + str(lane2.getNullPolls()))
                 log2journal.warning("L2_Poll:<%s>", repr(lane2.getFuelScanMsg()))
         else :
             lane2.clearNullPolls()
@@ -536,8 +547,8 @@ if __name__ == '__main__':
             log2journal.debug("L2_TAG_DQ:<%s><%d><%s>", lane2.getTag(), lane2.getSequentialReads(), repr(lane2.getFuelScanMsg()))   # repr to show escape characters like \n
 
         # log the Tag being detected in both lanes.
-        if((lane1.isTagValid()) and (lane2.isTagValid())):
-            if(lane2.getTag() == lane1.getTag()):
+        if ((lane1.isTagValid()) and (lane2.isTagValid())):
+            if (lane2.getTag() == lane1.getTag()):
                 log2journal.warning("BOTH_Q_DQ: TAG 1:<%s><%d> 2:<%s><%d>", lane1.getTag(), lane1.getSequentialReads(), lane2.getTag(), lane2.getSequentialReads())
 
 
@@ -559,21 +570,21 @@ if __name__ == '__main__':
         vid_L2_Msg = MSG_EMPTY                                                  # default value for VID lane 2
         vid_L2_cntReadFromQ = 0                                                 # more than 1 will indicate falling behind
 
-        vidQEmpty:bool = True
+        vidQEmpty : bool = True
 
         vidsListSize = len(vidsList)
 
-        for vidIn in vidsList:
-            if vidIn.startswith("1") :                                          # VID msgs for lane 1
+        for vidIn in vidsList :
+            if (vidIn.startswith("1")) :                                          # VID msgs for lane 1
                 vid_L1_Msg = vidIn
                 vid_L1_cntReadFromQ += 1
                 vidQEmpty = False
-            elif vidIn.startswith("2") :                                        # VID msgs for lane 2
+            elif (vidIn.startswith("2")) :                                        # VID msgs for lane 2
                 vid_L2_Msg = vidIn
                 vid_L2_cntReadFromQ += 1
                 vidQEmpty = False
 
-        if(False is vidQEmpty):
+        if (False is vidQEmpty):
             log2journal.debug("VID_DQ V1:<%s><%d> V2:<%s><%d>", repr(vid_L1_Msg), vid_L1_cntReadFromQ, repr(vid_L2_Msg), vid_L2_cntReadFromQ)
 
 
@@ -599,21 +610,23 @@ if __name__ == '__main__':
 
         if (lane1.getSequentialReads() > LANE_1_MIN) :                                                                  # get LANE_1_MIN_ consecutive reads to trust the data
             tagIn = "L1_1TAG"
-
             vid1Num = busNumFromMsg(vid_L1_Msg)
-            tag1Num = busNumFromMsg(lane1.getFuelScanMsg()) # someting for several counts
+            tag1Num = busNumFromMsg(lane1.getFuelScanMsg())  # someting for several counts
 
-            if (vid1Num == tag1Num):
-                vidMatchesRfid = "T1==V1"
-            else:
-                if(vid1Num is None):
-                    vidMatchesRfid = "T1ONLY"
-                else:
+            if (vid1Num is None) and (tag1Num is None) :
+                vidMatchesRfid = "T1__V1"
+            else :
+                if (vid1Num == tag1Num) :
+                    if (vid1Num is not None) and (tag1Num is not None) :
+                        vidMatchesRfid = "T1==V1"
+                    elif (vid1Num is None) and (tag1Num is not None) :
+                        vidMatchesRfid = "T1ONLY"
+                else :
                     vidMatchesRfid = "T1!=V1"
                     log2journal.warning("VID1:<%s> and TAG1:<%s> do not match.", vid1Num, tag1Num)
 
             # Flag if the RFID is seen in both lanes
-            if(((lane1.getFuelScanMsg()[2:9] == lane2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in lane1.getFuelScanMsg()) and (MSG_POLLING not in lane1.getFuelScanMsg())):
+            if (((lane1.getFuelScanMsg()[2:9] == lane2.getFuelScanMsg()[2:9])) and (MSG_EMPTY not in lane1.getFuelScanMsg()) and (MSG_POLLING not in lane1.getFuelScanMsg())):
                 log2journal.error("%s T1:<%s> T2<%s>", tagIn, repr(lane1.getFuelScanMsg()), repr(lane2.getFuelScanMsg()))
                 tagIn = "L1_2TAG"
 
@@ -626,11 +639,11 @@ if __name__ == '__main__':
         elif (vid_L1_Msg != MSG_EMPTY):
             vidMatchesRfid  = "V1ONLY"
             vid1Num = busNumFromMsg(vid_L1_Msg)
-            if( is_vid_in_scope(vid1Num, csvFleetList)) :
+            if (is_vid_in_scope(vid1Num, csvFleetList)) :
                 log2CSV(now, 'L1_VID', vid_L1_Msg, lane1.getFuelScanMsg(), tagId, tagBatt, lastTagId, vid_L1_cntReadFromQ, vidsListSize, vidMatchesRfid, tagIn)
 
             if (len(vid_L1_Msg) == STD_MSG_LEN):
-                log2journal.debug( "L1_VID FWD:<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
+                log2journal.debug("L1_VID FWD:<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
                 sendToSerial4("L1_V", vid_L1_Msg)                                                                           # send to serial port 4
             else :
                 log2journal.info("L1_VID Short:<%d><%s>", len(vid_L1_Msg), repr(vid_L1_Msg))
@@ -646,20 +659,22 @@ if __name__ == '__main__':
 
         if (lane2.getSequentialReads() > LANE_2_MIN) :
             tagIn = "L2_1TAG"
-
             vid2Num = busNumFromMsg(vid_L2_Msg)
-            tag2Num = busNumFromMsg(lane2.getFuelScanMsg()) # someting for several counts
+            tag2Num = busNumFromMsg(lane2.getFuelScanMsg())  # someting for several counts
 
-            if (vid2Num == tag2Num):
-                vidMatchesRfid = "T2==V2"
-            else:
-                if(vid2Num is None):
-                    vidMatchesRfid = "T2ONLY"
-                else:
+            if (vid2Num is None) and (tag2Num is None) :
+                vidMatchesRfid = "T2__V2"
+            else :
+                if (vid2Num == tag2Num) :
+                    if (vid2Num is not None) and (tag2Num is not None) :
+                        vidMatchesRfid = "T2==V2"
+                    elif (vid2Num is None) and (tag2Num is not None) :
+                        vidMatchesRfid = "T2ONLY"
+                else :
                     vidMatchesRfid = "T2!=V2"
-                    log2journal.warning("VID2:<%s> and TAG2:<%s> do not match.", vid2Num, tag2Num)
+                    log2journal.warning("VID2:<%s> and TAG2:<%s> do not match.", vid1Num, tag1Num)
 
-            if((lane2.getFuelScanMsg()[2:9] == lane1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in lane2.getFuelScanMsg()) and (MSG_POLLING not in lane2.getFuelScanMsg())): # Flag if the RFID is seen in both lanes
+            if ((lane2.getFuelScanMsg()[2:9] == lane1.getFuelScanMsg()[2:9]) and (MSG_EMPTY not in lane2.getFuelScanMsg()) and (MSG_POLLING not in lane2.getFuelScanMsg())) :  # Flag if the RFID is seen in both lanes
                 log2journal.error("%s T2:<%s> T1<%s>", tagIn, repr(lane2.getFuelScanMsg()), repr(lane1.getFuelScanMsg()))
                 tagIn = "L2_2TAG"
 
@@ -676,10 +691,10 @@ if __name__ == '__main__':
                 log2CSV(now, 'L2_VID', vid_L2_Msg, lane2.getFuelScanMsg(), tagId, tagBatt, lastTagId, vid_L2_cntReadFromQ, vidsListSize, vidMatchesRfid, tagIn)
 
             if (len(vid_L2_Msg) == STD_MSG_LEN):
-                log2journal.debug( "L2_VID FWD:<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
+                log2journal.debug("L2_VID FWD:<%d><%s>", len(vid_L2_Msg), repr(vid_L2_Msg))
                 sendToSerial4("L2_V", vid_L2_Msg)                                                                           # send to serial port 4
             else :
-                log2journal.info("L2_VID Short:<%d><%s>",len(vid_L2_Msg), repr(vid_L2_Msg))
+                log2journal.info("L2_VID Short:<%d><%s>", len(vid_L2_Msg), repr(vid_L2_Msg))
                 if (len(vid_L2_Msg) == VID_MSG_MISSING_ODO_LEN):                                                            # if repairable pad then
                     sendToSerial4("L2_X", (vid_L2_Msg[:-2] + ",00000000" + "\r\n"))                                         # send to serial port 4
 
@@ -694,7 +709,7 @@ if __name__ == '__main__':
 
         time.sleep(0.9)  # sleep
 
-    #_#end  Main While
-#_#end __name__ == '__main__'
+    # #_#end  Main While
+# #_#end __name__ == '__main__'
 
-#_#end file
+# #_#end file
