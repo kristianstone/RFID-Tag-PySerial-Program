@@ -4,6 +4,7 @@ A module that declares classes for the RFID Fuelbay Project.
 """
 
 import csv
+import queue
 
 from rfidConstants  import Q_EMPTY
 from rfidConstants  import MSG_INIT
@@ -23,7 +24,8 @@ class Reader:
     """
 
     # false if no tag, tagNumber = "Empty"
-    def __init__(self, tagNumber: str, num: str):
+    def __init__(self, tagNumber: str, num: str, laneQ: queue.Queue[str]):
+
         """
         Initializes an instance based on status and tag number
 
@@ -38,13 +40,14 @@ class Reader:
         self.batteryState   : str  = "ABSENT"
         self.sequentialReads: int  = 1
         self.lastTagNumber  : str  = tagNumber
+        self.queue          : queue.Queue[str] = laneQ
         self.qStatus        : int  = Q_EMPTY
 
         self.nullPolls      : int  = 0
 
         self.fleetNumber    : str  = "TagUnknown"
-        self.fuelScanMsg    : str  = MSG_EMPTY
 
+        self.fuelScanMsg    : str  = MSG_EMPTY
         self.prevFuelScanMsg: str  = MSG_INIT                      # initial RFID for lane 1
 
 

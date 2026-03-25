@@ -195,7 +195,7 @@ def log2CSV(when, tagOrigin, vidMsg, tagMsg, tagIdNum, battStat, prevTagNum, seq
                 'VIDMsgLen'         : msgVlen,
                 'TagMsg'            : msgT,
                 'TagMsgLen'         : msgTlen,
-                'TagIdNum'          : tagIdNum,
+                'TagNum'            : tagIdNum,
                 'TagSeqNum'         : seqNum,
                 'NullPolls'         : nullPolls,
                 'PrevTagNum'        : prevTagNum,
@@ -314,7 +314,7 @@ if __name__ == '__main__':
 
     vidsListSize:               int = 0
     vidQueue:       queue.Queue[str]  = queue.Queue()       # queue for VID detector
-    vid_Reader:     Reader = Reader(MSG_EMPTY, "0")              # VID detector lane 1
+    vid_Reader:     Reader = Reader(MSG_EMPTY, "0", vidQueue)              # VID detector lane 1
 
 
 
@@ -328,10 +328,10 @@ if __name__ == '__main__':
     MONITOR_UPS:        bool    = False
 
     lane1Q:             queue.Queue[str]  = queue.Queue()  # queue for reader 1
-    lane1:              Reader = Reader(MSG_EMPTY, "1")          # initalize first reader
+    lane1:              Reader = Reader(MSG_EMPTY, "1", lane1Q)    # initalize first reader
 
     lane2Q:             queue.Queue[str]  = queue.Queue()  # queue for reader 2
-    lane2:              Reader = Reader(MSG_EMPTY, "2")          # second reader
+    lane2:              Reader = Reader(MSG_EMPTY, "2", lane2Q)    # second reader
 
 
 
@@ -440,9 +440,9 @@ if __name__ == '__main__':
     ###################################################
     # creating each thread to receive data from readers
     ###################################################
-    threading.Thread(target=serialReadLine, args=(lane1Serial_In, "Lane1:",)).start()                           # reader 1 thread
-    threading.Thread(target=serialReadLine, args=(lane2Serial_In, "Lane2:",)).start()                           # reader 2 thread
-    threading.Thread(target=serialReadLine, args=(vid_In,    "VIDRD:",)).start()                                # VID detector thread
+    threading.Thread(target=serialReadLine, args=(lane1Serial_In,   "Lane1:",)).start()                           # reader 1 thread
+    threading.Thread(target=serialReadLine, args=(lane2Serial_In,   "Lane2:",)).start()                           # reader 2 thread
+    threading.Thread(target=serialReadLine, args=(vid_In,           "VIDRD:",)).start()                                # VID detector thread
 
 
 
@@ -489,14 +489,13 @@ if __name__ == '__main__':
 
 
 
-
     ########################
     # Process the RFID Queue
     ########################
     def dequeRFID_Q_Lane(lane: Reader):
         num: str        = lane.num
         # log2journal.debug("dequeRFID_Q_Lane %s", num)
-        if lane1Q.empty():
+        if lane.queue.empty():
             if (lane.getNullPolls() > LANE_EMPTY_MIN) :                                                                            # seqNumFuelScanMsgsFromRFID resets if too many empty reads
                 if (lane.getSequentialReads() != 0) :
                     log2journal.debug("L%s_Q_Empty:<%s><%d>", num, repr(lane.getFuelScanMsg()), lane.getSequentialReads())
@@ -510,7 +509,7 @@ if __name__ == '__main__':
                 log2journal.warning("L%s_Poll:<%s>", num, repr(lane.getFuelScanMsg()))                                                   # increment the empty counter for RFID reader 1
         else :
             lane.clearNullPolls()                                                                                                  # reset empty counter if queue is not empty
-            lane.updateTag(lane1Q.get(True), Q_READY)
+            lane.updateTag(lane.queue.get(True), Q_READY)
             lane.setFuelScanMsg(num + "-BBT" + lane.getBusNumFromTag(csvFleetList) + ",00000000" + "\r\n")                             # VID 800 outputs \r\n in the msg
             lane.incSequentialReads()
 
@@ -524,8 +523,7 @@ if __name__ == '__main__':
 
 
     ####################
-    #
-    #
+    # logLane
     ####################
     def logLane(vidMsg: str, thisLane: Reader, thatLane: Reader):
         num: str        = thisLane.num
@@ -534,7 +532,6 @@ if __name__ == '__main__':
         tagId           = thisLane.getTag()
         lastTagId       = thisLane.getLastTag()
         tagBatt         = thisLane.getBatteryStatus()
-
 
         tagIn           = "L" + num + "_1TAG"
         vidMatchesRfid  = "_T" + num + "V" + num + "_"
@@ -688,10 +685,10 @@ if __name__ == '__main__':
 
 count = 1
 while True:
-	print("Running... {}".format(count))
-	n.notify("STATUS=Count is {}".format(count))
-	count += 1
-	time.sleep(2)
+    print("Running... {}".format(count))
+    n.notify("STATUS=Count is {}".format(count))
+    count += 1
+    time.sleep(2)
 
     ##########################
     # Process the RFID 2 Queue
