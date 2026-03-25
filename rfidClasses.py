@@ -4,7 +4,10 @@ A module that declares classes for the RFID Fuelbay Project.
 """
 
 import csv
-from rfidConstants import  *
+
+from rfidConstants  import Q_EMPTY
+from rfidConstants  import MSG_INIT
+from rfidConstants  import MSG_EMPTY
 
 class Reader:
     """
@@ -20,7 +23,7 @@ class Reader:
     """
 
     # false if no tag, tagNumber = "Empty"
-    def __init__(self, tagNumber):
+    def __init__(self, tagNumber: str, num: str):
         """
         Initializes an instance based on status and tag number
 
@@ -29,19 +32,20 @@ class Reader:
             tagNumber: String of the RFID tag/ VID Tag currently being detected by the reader
             lastTagNumber
         """
-        self.tagNumber      :str  = tagNumber     # instance attribute
-        self.tagValid       :bool = False
-        self.batteryState   :str  = "ABSENT"
-        self.sequentialReads:int  = 1
-        self.lastTagNumber  :str  = tagNumber
-        self.qStatus        :int  = Q_EMPTY
+        self.num            : str = num
+        self.tagNumber      : str  = tagNumber     # instance attribute
+        self.tagValid       : bool = False
+        self.batteryState   : str  = "ABSENT"
+        self.sequentialReads: int  = 1
+        self.lastTagNumber  : str  = tagNumber
+        self.qStatus        : int  = Q_EMPTY
 
-        self.nullPolls      :int  = 0
+        self.nullPolls      : int  = 0
 
-        self.fleetNumber    :str  = "TagUnknown"
-        self.fuelScanMsg    :str  = MSG_EMPTY
+        self.fleetNumber    : str  = "TagUnknown"
+        self.fuelScanMsg    : str  = MSG_EMPTY
 
-        self.prevFuelScanMsg:str  = MSG_INIT                      # initial RFID for lane 1
+        self.prevFuelScanMsg: str  = MSG_INIT                      # initial RFID for lane 1
 
 
     def findFirstUnprintable(self, s) -> int:
@@ -67,7 +71,7 @@ class Reader:
     def incSequentialReads(self) :
         self.sequentialReads += 1
 
-    def setSequentialReads(self, value:int) :
+    def setSequentialReads(self, value: int) :
         self.sequentialReads = value
 
     def getSequentialReads(self) -> int :
@@ -80,21 +84,21 @@ class Reader:
     def incNullPolls(self) :
         self.nullPolls += 1
 
-    def setNullPolls(self, value:int) :
+    def setNullPolls(self, value: int) :
         self.nullPolls = value
 
     def getNullPolls(self) -> int:
         return self.nullPolls
 
 
-    def setFuelScanMsg(self, value:str) :
+    def setFuelScanMsg(self, value: str) :
         self.fuelScanMsg = value
 
     def getFuelScanMsg(self) -> str:
         return self.fuelScanMsg
 
 
-    def setPrevFuelScanMsg(self, value:str) :
+    def setPrevFuelScanMsg(self, value: str) :
         self.prevFuelScanMsg = value
 
     def getPrevFuelScanMsg(self) -> str:
@@ -123,11 +127,11 @@ class Reader:
     def updateTag(self, newTag, status) -> bool :
         # Function to update the tag being read
 
-        if(newTag[0] == 'N') :                          # record last valid tag
+        if (newTag[0] == 'N') :                          # record last valid tag
             self.tagValid = True
             self.batteryState = "CHARGED"
 
-        elif(newTag[0] == 'n') :                          # record last valid tag
+        elif (newTag[0] == 'n') :                          # record last valid tag
             self.tagValid = True
             self.batteryState = "REPLACE"
 
@@ -159,15 +163,15 @@ class Reader:
             csvFile: A formatted CSV file which contains a lookup table of each bus and RFID tag number
         """
 
-        self.fleetNumber = "XXXX" # default not registered
+        self.fleetNumber = "XXXX"                                           # default not registered
 
         if ((self.tagNumber[0] == 'N') or (self.tagNumber[0] == 'n')) :
-            with open(csvFile, mode='r', encoding="utf-8") as file: # read each row of csv file
-                tagNum = self.tagNumber[1:] # remove the prefix 'N' or 'n'
+            with open(csvFile, mode='r', encoding="utf-8") as file:         # read each row of csv file
+                tagNum = self.tagNumber[1:]                                 # remove the prefix 'N' or 'n'
                 for x in csv.reader(file):
-                    if str(int(tagNum)) == str(x[1]): # checks if it exists in the list
-                        self.fleetNumber = x[0] # update the fleet number
+                    if str(int(tagNum)) == str(x[1]):                       # checks if it exists in the list
+                        self.fleetNumber = x[0]                             # update the fleet number
         else :
-            print ("Tag does not start with N|n")
+            print("Tag does not start with N|n")
 
         return self.fleetNumber

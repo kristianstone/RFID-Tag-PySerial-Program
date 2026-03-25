@@ -95,13 +95,15 @@ Set up Service to run the RFID App
 Create and Edit the service File
 --------------------------------
     sudo nano /lib/systemd/system/rfid-fuellane-id.service
-Service<<<
+<<<
 [Unit]
 Description=FMS RFID Reader for Fuel Lane Id
 After=network.target
 
 [Service]
-Type=simple
+#Type=simple
+Type=notify
+NotifyAccess=all
 WorkingDirectory=/home/pi/rfid
 ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py  -c 1  -d 1  -e 3  -l 5  -r 5  -s 1
 #-c csvLogging          0=disable 1=enable
@@ -111,17 +113,16 @@ ExecStart=/home/pi/rfid/rfidenv/bin/python3  -u /home/pi/rfid/rfidMain.py  -c 1 
 #-r rightLane           min consecutive reads
 #-s send2serial         0=disable 1=enable
 
-ExecStopPost=/bin/systemctl restart rfid-fuellane-gui.service
+WatchdogSec=15s
+
+ExecStopPost=sudo -E /bin/systemctl restart rfid-fuellane-gui.service
 
 User=pi
+
 # Optionally, add Restart options to make the service automatically restart if it crashes
-#Restart=on-failure
+# Restart=on-failure
 Restart=always
 RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-
 
 [Install]
 WantedBy=multi-user.target
@@ -260,7 +261,41 @@ Make Permanent Configuration Changes to Systemd
 ===============================================
     sudo nano /etc/systemd/journald.conf
 
-    SystemMaxUse=100M
+[Journal]
+#Storage=auto
+#Compress=yes
+#Seal=yes
+#SplitMode=uid
+#SyncIntervalSec=5m
+#RateLimitIntervalSec=30s
+#RateLimitBurst=10000
+#SystemMaxUse=
+SystemMaxUse=800M
+#SystemKeepFree=
+#SystemMaxFileSize=
+SystemMaxFileSize=100M
+#SystemMaxFiles=100
+#RuntimeMaxUse=
+#RuntimeKeepFree=
+#RuntimeMaxFileSize=
+#RuntimeMaxFiles=100
+MaxRetentionSec=7day
+#MaxFileSec=1month
+#ForwardToSyslog=no
+#ForwardToKMsg=no
+#ForwardToConsole=no
+#ForwardToWall=yes
+#TTYPath=/dev/console
+#MaxLevelStore=debug
+#MaxLevelSyslog=debug
+#MaxLevelKMsg=notice
+#MaxLevelConsole=info
+#MaxLevelWall=emerg
+#MaxLevelSocket=debug
+#LineMax=48K
+#ReadKMsg=yes
+#Audit=yes
+
 
 Save and exit (Ctrl+O, Enter, Ctrl+X), then restart the service:
 ----------------------------------------------------------------
@@ -371,3 +406,42 @@ To serial connect to the Reader
  picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity n --databits 8 /dev/ttyUSB1
 
 picocom -b 9600 --echo --omap crcrlf --stopbits 1 --parity e --databits 7 /dev/ttyUSB1
+
+
+
+additional packages for fule-bay-admin
+======================================
+
+    1  sudo apt update
+    2  sudo apt install gnome-system-monitor
+    3  sudo apt update
+    4  sudo apt install gnome-system-monitor
+    6  sudo apt update
+    7  sudo apt install openssh-server
+   13  sudo apt install htop
+  192  sudo apt install geany
+  193  sudo apt install gedit
+
+
+
+
+/etc/apache2/apache2.conf
+=========================
+
+Alias /rfid/dev "/home/fuel-bay-admin/rfid/rfid-dev"
+<Directory "/home/fuel-bay-admin/rfid/rfid-dev">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+
+
+Alias /rfid/fleet "/home/fuel-bay-admin/rfid/fleet"
+<Directory "/home/fuel-bay-admin/rfid/fleet">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+
+
+sudo systemctl restart apache2
