@@ -1,16 +1,24 @@
 #!/usr/bin/bash
 # -vx
 # bash script to collect the current version of fleet_list.csv
+
+# http://100.85.208.50/rfid/fleet/      where the fleet_list.csv is stored
+# http://100.85.208.50/rfid/dev/        where to find the source code
+# http://100.85.208.50/rfid/logs/       where logs can be uploaded
+
 echo "Fleet List Update Started"
 echo "Generate sha1 of local fleet_list.csv"
 /usr/bin/sha1sum /home/pi/rfid/fleet_list.csv > /home/pi/rfid/fleet_list.local.sha1
 
 echo "Get sha1 of the hosts fleet_list.csv"
 /usr/bin/rm /home/pi/rfid/fleet_list.host.sha1
-/usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.host.sha1  /home/pi/rfid/fleet_list.host.sha1
+# /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.host.sha1  /home/pi/rfid/fleet_list.host.sha1
+# --tries=0 --read-timeout=20 --timeout=15 --retry-connrefused
+ wget --tries=3 -O ~/rfid/fleet_list.host.sha1 http://100.85.208.50/rfid/fleet/fleet_list.host.sha1
+
 # if fail to copy host sha1 exit
 if [ $? -ne 0 ]; then
-    echo "Failed to SCP SHA1 of the new Fleet List"
+    echo "Failed to Get SHA1 of the new Fleet List"
     exit 1
 fi
 
@@ -30,10 +38,12 @@ if [[ "$WORD1" == "$WORD2" ]]; then
 else
     echo "Update Fleet List! Local:<$WORD1> vs Host:<$WORD2>"
     /usr/bin/cp /home/pi/rfid/fleet_list.csv /home/pi/rfid/"fleet_list_$(date +%Y-%m-%d_%H).csv" || true
-    /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/fleet_list.csv.new
+#    /usr/bin/scp -o ConnectionAttempts=3 fms2@100.83.58.53:/Users/FMS2/Documents/RFID-Dev/04_DATA/fleet_list.csv  /home/pi/rfid/fleet_list.csv.new
+    wget --tries=3 -O ~/rfid/fleet_list.csv.new http://100.85.208.50/rfid/fleet/fleet_list.csv
+
     # if fail to get new csv file exit
     if [ $? -ne 0 ]; then
-        echo "Failed to SCP the new Fleet List"
+        echo "Failed to Get the new Fleet List"
         exit 2
     else
         /usr/bin/cat /home/pi/rfid/fleet_list.csv.new > /home/pi/rfid/fleet_list.csv

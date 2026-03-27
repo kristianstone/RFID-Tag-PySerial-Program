@@ -1,4 +1,3 @@
-# pylint: disable=C0114, C0115, C0116
 """
 A module that declares classes for the RFID Fuelbay Project.
 """
@@ -24,6 +23,7 @@ class Reader:
     """
 
     # false if no tag, tagNumber = "Empty"
+    #############
     def __init__(self, tagNumber: str, num: str, laneQ: queue.Queue[str]):
 
         """
@@ -50,7 +50,8 @@ class Reader:
         self.fuelScanMsg    : str  = MSG_EMPTY
         self.prevFuelScanMsg: str  = MSG_INIT                      # initial RFID for lane 1
 
-
+    #
+    #########################
     def findFirstUnprintable(self, s) -> int:
         for i, char in enumerate(s):
             if not char.isprintable():
@@ -59,6 +60,7 @@ class Reader:
 
 
     # get tag
+    ###########
     def getTag(self) -> str :
         # Returns the string of the RFID tag/ VID Tag currently being detected
         s = self.tagNumber
@@ -67,59 +69,79 @@ class Reader:
         index = self.findFirstUnprintable(s)
         return self.tagNumber[:index]
 
-
+    #
+    #########################
     def clearSequentialReads(self) :
         self.sequentialReads = 0
 
+    #
+    #######################
     def incSequentialReads(self) :
         self.sequentialReads += 1
-
+    #
+    #######################
     def setSequentialReads(self, value: int) :
         self.sequentialReads = value
-
+    #
+    #######################
     def getSequentialReads(self) -> int :
         return self.sequentialReads
 
-
+    #
+    ###################
     def clearNullPolls(self) :
         self.nullPolls = 0
 
+    #
+    #################
     def incNullPolls(self) :
         self.nullPolls += 1
 
+    #
+    #################
     def setNullPolls(self, value: int) :
         self.nullPolls = value
 
+    #
+    #################
     def getNullPolls(self) -> int:
         return self.nullPolls
 
-
+    #
+    ###################
     def setFuelScanMsg(self, value: str) :
         self.fuelScanMsg = value
-
+    #
+    ###################
     def getFuelScanMsg(self) -> str:
         return self.fuelScanMsg
 
-
+    #
+    #######################
     def setPrevFuelScanMsg(self, value: str) :
         self.prevFuelScanMsg = value
 
+    #
+    #######################
     def getPrevFuelScanMsg(self) -> str:
         return self.prevFuelScanMsg
 
 
     # get tag
+    ###############
     def isTagValid(self) -> bool :
         return self.tagValid
 
     # get tag Battry Condition
+    #####################
     def getBatteryStatus(self) -> str :
         return self.batteryState
 
     # get tag
+    ###############
     def getLastTag(self) -> str:
         # Returns the string of the Last  RFID tag/ VID Tag detected
-        # WAB strip off trailing unprintable
+        # Strips off trailing unprintable
         s = self.lastTagNumber
         index = self.findFirstUnprintable(s)
         return self.lastTagNumber[:index]
@@ -127,6 +149,7 @@ class Reader:
 
 
     # change tag
+    ##############
     def updateTag(self, newTag, status) -> bool :
         # Function to update the tag being read
 
@@ -154,9 +177,7 @@ class Reader:
     ## WAB ToDo This needs polishing.
     ## - rfid tags are:  "EMPTY" "2_POLLING_" or "1_POLLING_"
     ## Concerns:
-    ## - misreads from RFID readers i.e. does not consider chars and will break
-
-
+    #####################
     def getBusNumFromTag(self, csvFile):
         """
         Function to convert the RFID tag string to the fleet number of the bus the tag
